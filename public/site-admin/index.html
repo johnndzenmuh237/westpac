@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Admin Panel | West Pec Global International Bank</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:wght@600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--navy:#0b2545;--navy-dark:#071a33;--gold:#c6a15b;--gold-light:#e4cd99;--ink:#1b2430;--muted:#5b6774;--line:#e4e8ee;--bg:#f4f6f9;--ok:#1e7a46;--bad:#8a1f1f;--radius:12px}
+*{box-sizing:border-box}
+body{margin:0;font-family:'Inter',system-ui,sans-serif;color:var(--ink);background:var(--bg)}
+h1,h2,h3{font-family:'Source Serif 4',Georgia,serif;margin:0}
+a{color:inherit}
+.wrap{max-width:1100px;margin:0 auto;padding:0 20px}
+
+/* Login gate */
+#loginGate{min-height:100vh;display:flex;align-items:center;justify-content:center;background:linear-gradient(160deg,var(--navy),var(--navy-dark));padding:20px}
+.login-card{background:#fff;border-radius:16px;max-width:380px;width:100%;padding:32px;box-shadow:0 20px 50px rgba(0,0,0,.25)}
+.login-card h1{font-size:20px;color:var(--navy);margin-bottom:6px}
+.login-card p{color:var(--muted);font-size:13.8px;margin:0 0 18px}
+.demo-note{background:#fdf6e8;border:1px solid var(--gold-light);color:#6b5520;font-size:12.6px;padding:10px 12px;border-radius:9px;margin-bottom:16px}
+.field{margin-bottom:14px}
+.field label{display:block;font-size:13.5px;font-weight:600;margin-bottom:6px}
+.field input,.field select{width:100%;padding:11px 12px;border:1.5px solid var(--line);border-radius:9px;font-size:15px;font-family:inherit}
+.btn{background:var(--navy);color:#fff;padding:11px 18px;border-radius:9px;font-weight:600;font-size:14.5px;border:none;cursor:pointer;font-family:inherit}
+.btn:hover{background:var(--navy-dark)}
+.btn.small{padding:7px 12px;font-size:13px;border-radius:7px}
+.btn.ghost{background:#fff;border:1.5px solid var(--navy);color:var(--navy)}
+.btn.danger{background:#fff;border:1.5px solid var(--bad);color:var(--bad)}
+.btn.gold{background:var(--gold);color:var(--navy-dark)}
+.error-msg{color:var(--bad);font-size:13.5px;margin-top:10px;display:none}
+
+/* Dashboard */
+#dashboard{display:none}
+header.admin-top{background:var(--navy-dark);color:#fff;padding:16px 0}
+.admin-top .wrap{display:flex;align-items:center;justify-content:space-between}
+.admin-brand{display:flex;align-items:center;gap:10px;font-weight:700}
+.tabs{display:flex;gap:8px;margin:26px 0 20px}
+.tab-btn{background:#fff;border:1.5px solid var(--line);color:var(--ink);padding:9px 18px;border-radius:999px;font-weight:600;font-size:14px;cursor:pointer;font-family:inherit}
+.tab-btn.active{background:var(--navy);color:#fff;border-color:var(--navy)}
+.panel{display:none;padding-bottom:60px}
+.panel.active{display:block}
+.toolbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:10px}
+.stat-row{display:flex;gap:14px;margin-bottom:22px;flex-wrap:wrap}
+.stat{background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:14px 18px;min-width:120px}
+.stat b{display:block;font-family:'Source Serif 4',serif;font-size:22px;color:var(--navy)}
+.stat span{font-size:12.5px;color:var(--muted)}
+table{width:100%;border-collapse:collapse;background:#fff;border-radius:var(--radius);overflow:hidden;border:1px solid var(--line)}
+th,td{text-align:left;padding:12px 14px;font-size:13.8px;border-bottom:1px solid var(--line)}
+th{background:#f3f6fa;font-weight:600;color:var(--navy)}
+tr:last-child td{border-bottom:none}
+.badge{display:inline-block;padding:3px 10px;border-radius:999px;font-size:11.5px;font-weight:700}
+.badge.new{background:#e8f0fb;color:#1a4a8a}
+.badge.contacted{background:#f3eeda;color:#6b5520}
+.badge.approved{background:#e9f6ee;color:var(--ok)}
+.badge.rejected{background:#fde9e9;color:var(--bad)}
+.badge.pending{background:#f3eeda;color:#6b5520}
+.stars{color:var(--gold);letter-spacing:1px}
+.empty-note{text-align:center;color:var(--muted);padding:40px 20px;background:#fff;border:1.5px dashed var(--line);border-radius:var(--radius)}
+.modal-bg{position:fixed;inset:0;background:rgba(7,26,51,.55);display:none;align-items:center;justify-content:center;z-index:100;padding:20px}
+.modal-bg.open{display:flex}
+.modal{background:#fff;border-radius:16px;max-width:520px;width:100%;max-height:85vh;overflow-y:auto;padding:30px;position:relative}
+.modal .close{position:absolute;top:14px;right:14px;background:none;border:none;cursor:pointer;color:var(--muted);font-size:16px}
+.detail-row{display:flex;justify-content:space-between;font-size:13.8px;padding:8px 0;border-bottom:1px solid var(--line)}
+.detail-row b{color:var(--navy);font-weight:600}
+@media (max-width:760px){
+  table, thead, tbody, th, td, tr{display:block}
+  thead{display:none}
+  tr{border-bottom:2px solid var(--line);padding:10px 0}
+  td{border:none;padding:4px 14px;display:flex;justify-content:space-between;gap:10px}
+  td::before{content:attr(data-label);font-weight:600;color:var(--navy)}
+}
+</style>
+</head>
+<body>
+
+<div id="loginGate">
+  <div class="login-card">
+    <h1>Admin Panel</h1>
+    <p>West Pec Global International Bank</p>
+    <div class="demo-note">Demo-only access gate. This password check runs in your browser and is not real security — do not use this pattern for a live production admin panel.</div>
+    <div class="field"><label for="apw">Admin password</label><input id="apw" type="password" placeholder="Enter demo password"></div>
+    <button class="btn" style="width:100%" onclick="tryLogin()">Log In</button>
+    <div class="error-msg" id="loginError">Incorrect password. (Demo password: admin123)</div>
+  </div>
+</div>
+
+<div id="dashboard">
+  <header class="admin-top">
+    <div class="wrap">
+      <div class="admin-brand">
+        <svg width="26" height="26" viewBox="0 0 64 64"><rect width="64" height="64" rx="12" fill="#13335c"/><path d="M16 44 L32 18 L48 44" stroke="#c6a15b" stroke-width="5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        West Pec Global — Admin
+      </div>
+      <div style="display:flex;gap:10px">
+        <button class="btn" style="background:transparent;border:1.5px solid rgba(255,255,255,.5);color:#fff" onclick="refreshAll()">Refresh</button>
+        <button class="btn" style="background:rgba(255,255,255,.15)" onclick="logout()">Log Out</button>
+      </div>
+    </div>
+  </header>
+
+  <div class="wrap">
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="apps" onclick="showTab('apps')">Account Applications</button>
+      <button class="tab-btn" data-tab="reviews" onclick="showTab('reviews')">Review Moderation</button>
+    </div>
+
+    <!-- APPLICATIONS -->
+    <div class="panel active" id="panel-apps">
+      <div class="stat-row">
+        <div class="stat"><b id="statAppsTotal">0</b><span>Total applications</span></div>
+        <div class="stat"><b id="statAppsNew">0</b><span>New / awaiting review</span></div>
+      </div>
+      <div id="appsTableWrap"></div>
+    </div>
+
+    <!-- REVIEWS -->
+    <div class="panel" id="panel-reviews">
+      <div class="stat-row">
+        <div class="stat"><b id="statRevPending">0</b><span>Pending reviews</span></div>
+        <div class="stat"><b id="statRevApproved">0</b><span>Approved reviews</span></div>
+        <div class="stat"><b id="statRevAvg">—</b><span>Average rating (approved)</span></div>
+      </div>
+      <div class="toolbar">
+        <div style="display:flex;gap:8px">
+          <button class="tab-btn active" data-rf="all" onclick="setReviewFilter('all')">All</button>
+          <button class="tab-btn" data-rf="pending" onclick="setReviewFilter('pending')">Pending</button>
+          <button class="tab-btn" data-rf="approved" onclick="setReviewFilter('approved')">Approved</button>
+          <button class="tab-btn" data-rf="rejected" onclick="setReviewFilter('rejected')">Rejected</button>
+        </div>
+      </div>
+      <div id="reviewsTableWrap"></div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-bg" id="detailModalBg">
+  <div class="modal">
+    <button class="close" onclick="closeDetail()" aria-label="Close">✕</button>
+    <h3 style="color:var(--navy);margin-bottom:14px">Application Details</h3>
+    <div id="detailBody"></div>
+  </div>
+</div>
+
+<script>
+var ADMIN_PASSWORD = 'admin123';
+var reviewFilter = 'all';
+
+function tryLogin(){
+  var pw = document.getElementById('apw').value;
+  if(pw === ADMIN_PASSWORD){
+    sessionStorage.setItem('mh_admin_auth','1');
+    document.getElementById('loginGate').style.display='none';
+    document.getElementById('dashboard').style.display='block';
+    refreshAll();
+  } else {
+    document.getElementById('loginError').style.display='block';
+  }
+}
+function logout(){
+  sessionStorage.removeItem('mh_admin_auth');
+  document.getElementById('dashboard').style.display='none';
+  document.getElementById('loginGate').style.display='flex';
+  document.getElementById('apw').value='';
+}
+(function(){
+  if(sessionStorage.getItem('mh_admin_auth')==='1'){
+    document.getElementById('loginGate').style.display='none';
+    document.getElementById('dashboard').style.display='block';
+    refreshAll();
+  }
+})();
+document.getElementById('apw').addEventListener('keydown',function(e){if(e.key==='Enter')tryLogin();});
+
+function showTab(tab){
+  document.querySelectorAll('.tabs .tab-btn').forEach(function(b){b.classList.toggle('active', b.dataset.tab===tab);});
+  document.getElementById('panel-apps').classList.toggle('active', tab==='apps');
+  document.getElementById('panel-reviews').classList.toggle('active', tab==='reviews');
+}
+function setReviewFilter(f){
+  reviewFilter=f;
+  document.querySelectorAll('[data-rf]').forEach(function(b){b.classList.toggle('active', b.dataset.rf===f);});
+  renderReviewsTable();
+}
+
+/* ---- storage helpers (same keys as the main site) ---- */
+function getApps(){try{return JSON.parse(localStorage.getItem('mh_applications')||'[]');}catch(e){return [];}}
+function saveApps(a){try{localStorage.setItem('mh_applications',JSON.stringify(a));}catch(e){}}
+function getReviews(){try{return JSON.parse(localStorage.getItem('mh_reviews')||'[]');}catch(e){return [];}}
+function saveReviews(a){try{localStorage.setItem('mh_reviews',JSON.stringify(a));}catch(e){}}
+function escapeHtml(str){var d=document.createElement('div');d.textContent=str||'';return d.innerHTML;}
+function starStr(n){var s='';for(var i=1;i<=5;i++){s+=(i<=n?'★':'☆');}return s;}
+function fmtDate(iso){try{return new Date(iso).toLocaleDateString()+' '+new Date(iso).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});}catch(e){return iso;}}
+
+function refreshAll(){ renderAppsTable(); renderReviewsTable(); }
+
+/* ---- Applications ---- */
+function renderAppsTable(){
+  var apps=getApps();
+  document.getElementById('statAppsTotal').textContent=apps.length;
+  document.getElementById('statAppsNew').textContent=apps.filter(function(a){return a.status==='new';}).length;
+  var wrap=document.getElementById('appsTableWrap');
+  if(apps.length===0){ wrap.innerHTML='<div class="empty-note">No applications submitted yet.</div>'; return; }
+  apps.sort(function(a,b){return new Date(b.date)-new Date(a.date);});
+  var html='<table><thead><tr><th>Name</th><th>Account Type</th><th>Email</th><th>Submitted</th><th>Status</th><th>Actions</th></tr></thead><tbody>';
+  apps.forEach(function(a){
+    html+='<tr>'+
+      '<td data-label="Name">'+escapeHtml(a.fullName||'—')+'</td>'+
+      '<td data-label="Account Type">'+escapeHtml(a.acctType||'—')+'</td>'+
+      '<td data-label="Email">'+escapeHtml(a.email||'—')+'</td>'+
+      '<td data-label="Submitted">'+fmtDate(a.date)+'</td>'+
+      '<td data-label="Status"><span class="badge '+(a.status||'new')+'">'+(a.status||'new')+'</span></td>'+
+      '<td data-label="Actions" style="display:flex;gap:6px;flex-wrap:wrap">'+
+        '<button class="btn small ghost" onclick="viewApp(\''+a.id+'\')">View</button>'+
+        '<select onchange="setAppStatus(\''+a.id+'\',this.value)" style="padding:6px;border-radius:6px;border:1px solid var(--line);font-size:12.5px">'+
+          ['new','contacted','approved','rejected'].map(function(s){return '<option value="'+s+'"'+(a.status===s?' selected':'')+'>'+s+'</option>';}).join('')+
+        '</select>'+
+        '<button class="btn small danger" onclick="deleteApp(\''+a.id+'\')">Delete</button>'+
+      '</td></tr>';
+  });
+  html+='</tbody></table>';
+  wrap.innerHTML=html;
+}
+function setAppStatus(id,status){
+  var apps=getApps();
+  apps=apps.map(function(a){ if(a.id===id) a.status=status; return a; });
+  saveApps(apps);
+  renderAppsTable();
+}
+function deleteApp(id){
+  if(!confirm('Delete this application? This cannot be undone.')) return;
+  var apps=getApps().filter(function(a){return a.id!==id;});
+  saveApps(apps);
+  renderAppsTable();
+}
+function viewApp(id){
+  var app=getApps().find(function(a){return a.id===id;});
+  if(!app) return;
+  var fields=[
+    ['Account type',app.acctType],['Preferred currencies',app.currencies],
+    ['Full legal name',app.fullName],['Date of birth',app.dob],
+    ['Nationality',app.nationality],['Country of residence',app.residence],
+    ['Address',app.address],['City',app.city],['Postal code',app.postcode],
+    ['Email',app.email],['Phone',app.phone],
+    ['ID type',app.idType],['ID number',app.idNumber],['ID issuing country',app.idCountry],
+    ['Occupation',app.occupation],['Employer',app.employer],['Source of funds',app.sourceFunds],
+    ['Expected deposit',app.deposit],['Business reg. number',app.bizReg],
+    ['Submitted',fmtDate(app.date)],['Status',app.status]
+  ];
+  var html='';
+  fields.forEach(function(f){ html+='<div class="detail-row"><span>'+f[0]+'</span><b>'+escapeHtml(f[1]||'—')+'</b></div>'; });
+  document.getElementById('detailBody').innerHTML=html;
+  document.getElementById('detailModalBg').classList.add('open');
+}
+function closeDetail(){document.getElementById('detailModalBg').classList.remove('open');}
+document.getElementById('detailModalBg').addEventListener('click',function(e){if(e.target.id==='detailModalBg')closeDetail();});
+
+/* ---- Reviews ---- */
+function renderReviewsTable(){
+  var all=getReviews();
+  var approved=all.filter(function(r){return r.status==='approved';});
+  document.getElementById('statRevPending').textContent=all.filter(function(r){return r.status==='pending';}).length;
+  document.getElementById('statRevApproved').textContent=approved.length;
+  document.getElementById('statRevAvg').textContent = approved.length? (approved.reduce(function(s,r){return s+r.rating;},0)/approved.length).toFixed(1) : '—';
+
+  var list = reviewFilter==='all' ? all : all.filter(function(r){return r.status===reviewFilter;});
+  var wrap=document.getElementById('reviewsTableWrap');
+  if(list.length===0){ wrap.innerHTML='<div class="empty-note">No reviews in this view yet.</div>'; return; }
+  list.sort(function(a,b){return new Date(b.date)-new Date(a.date);});
+  var html='<table><thead><tr><th>Name</th><th>Rating</th><th>Review</th><th>Submitted</th><th>Status</th><th>Actions</th></tr></thead><tbody>';
+  list.forEach(function(r){
+    var actions='';
+    if(r.status==='pending'){
+      actions='<button class="btn small gold" onclick="setReviewStatus(\''+r.id+'\',\'approved\')">Approve</button> '+
+              '<button class="btn small danger" onclick="setReviewStatus(\''+r.id+'\',\'rejected\')">Reject</button>';
+    } else if(r.status==='approved'){
+      actions='<button class="btn small ghost" onclick="toggleFeature(\''+r.id+'\')">'+(r.featured?'Unfeature':'Feature')+'</button> '+
+              '<button class="btn small danger" onclick="setReviewStatus(\''+r.id+'\',\'rejected\')">Reject</button>';
+    } else {
+      actions='<button class="btn small gold" onclick="setReviewStatus(\''+r.id+'\',\'approved\')">Approve</button>';
+    }
+    actions+=' <button class="btn small danger" onclick="deleteReview(\''+r.id+'\')">Delete</button>';
+    html+='<tr>'+
+      '<td data-label="Name">'+escapeHtml(r.name||'—')+(r.featured?' ⭐':'')+'</td>'+
+      '<td data-label="Rating"><span class="stars">'+starStr(r.rating)+'</span></td>'+
+      '<td data-label="Review" style="max-width:280px">'+escapeHtml(r.comment||'')+'</td>'+
+      '<td data-label="Submitted">'+fmtDate(r.date)+'</td>'+
+      '<td data-label="Status"><span class="badge '+r.status+'">'+r.status+'</span></td>'+
+      '<td data-label="Actions" style="display:flex;gap:6px;flex-wrap:wrap">'+actions+'</td>'+
+      '</tr>';
+  });
+  html+='</tbody></table>';
+  wrap.innerHTML=html;
+}
+function setReviewStatus(id,status){
+  var reviews=getReviews().map(function(r){ if(r.id===id){ r.status=status; if(status!=='approved') r.featured=false; } return r; });
+  saveReviews(reviews);
+  renderReviewsTable();
+}
+function toggleFeature(id){
+  var reviews=getReviews().map(function(r){ if(r.id===id) r.featured=!r.featured; return r; });
+  saveReviews(reviews);
+  renderReviewsTable();
+}
+function deleteReview(id){
+  if(!confirm('Delete this review? This cannot be undone.')) return;
+  var reviews=getReviews().filter(function(r){return r.id!==id;});
+  saveReviews(reviews);
+  renderReviewsTable();
+}
+</script>
+</body>
+</html>

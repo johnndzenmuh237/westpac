@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>West Pec Global — Administration</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:wght@600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%230b2545'/%3E%3Cpath d='M16 44 L32 18 L48 44' stroke='%23d4af37' stroke-width='5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="/css/style.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+</head>
+<body>
+<div class="toast-wrap" id="toastWrap"></div>
+<div class="app">
+  <div class="sidebar-scrim hidden" id="scrim" onclick="toggleSidebar(false)"></div>
+  <div class="sidebar" id="sidebar">
+    <div class="sidebar-brand">
+      <div class="brand-mark" style="width:32px;height:32px;font-size:15px;"><i class="fa-solid fa-anchor"></i></div>
+      <div style="font-weight:800;font-size:15.5px;">West Pec <span style="color:var(--purple-2)">Global</span> <span class="muted" style="font-size:11px;font-weight:600;">Admin</span></div>
+    </div>
+    <div class="nav-item active" data-view="overview" onclick="nav('overview')"><span class="ic"><i class="fa-solid fa-chart-pie"></i></span> Overview</div>
+    <div class="nav-item" data-view="createuser" onclick="nav('createuser')"><span class="ic"><i class="fa-solid fa-user-plus"></i></span> Create User</div>
+    <div class="nav-item" data-view="users" onclick="nav('users')"><span class="ic"><i class="fa-solid fa-users"></i></span> Manage Users</div>
+    <div class="nav-item" data-view="deposits" onclick="nav('deposits')"><span class="ic"><i class="fa-solid fa-qrcode"></i></span> Deposit Addresses</div>
+    <div class="nav-item" data-view="support" onclick="nav('support')"><span class="ic"><i class="fa-solid fa-headset"></i></span> Support Settings</div>
+    <div class="nav-item" data-view="withdrawals" onclick="nav('withdrawals')"><span class="ic"><i class="fa-solid fa-building-columns"></i></span> Withdrawal Requests <span id="pendingBadge" class="hidden" style="margin-left:auto;background:var(--red);color:#fff;font-size:10.5px;padding:1px 7px;border-radius:100px;"></span></div>
+    <div class="nav-spacer"></div>
+    <div class="nav-item" onclick="logout()"><span class="ic"><i class="fa-solid fa-right-from-bracket"></i></span> Logout</div>
+  </div>
+  <div class="main">
+    <div class="topbar">
+      <div class="row gap-12">
+        <button class="menu-btn" onclick="toggleSidebar(true)"><i class="fa-solid fa-bars"></i></button>
+        <h2>Admin <span>Control Panel</span></h2>
+      </div>
+      <div class="avatar">A</div>
+    </div>
+    <div id="view-overview"></div>
+    <div id="view-createuser" class="hidden"></div>
+    <div id="view-users" class="hidden"></div>
+    <div id="view-edituser" class="hidden"></div>
+    <div id="view-deposits" class="hidden"></div>
+    <div id="view-support" class="hidden"></div>
+    <div id="view-withdrawals" class="hidden"></div>
+  </div>
+</div>
+<div id="modalRoot"></div>
+<script src="/js/api.js"></script>
+<script src="/js/countries.js"></script>
+<script src="/js/admin.js"></script>
+</body>
+</html>
