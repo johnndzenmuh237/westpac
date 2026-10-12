@@ -45,7 +45,7 @@
   ]
 }
 </script>
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%230b2545'/%3E%3Cpath d='M16 44 L32 18 L48 44' stroke='%23d4af37' stroke-width='5' fill='none' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%230b2545'/%3E%3Cpath d='M13 19 L22.5 46 L32 27 L41.5 46 L51 19' stroke='%23ffffff' stroke-width='5.2' fill='none' stroke-linejoin='miter'/%3E%3Cpath d='M20 53 H44' stroke='%23c6a15b' stroke-width='2.5' stroke-linecap='round'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:wght@600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -66,6 +66,19 @@ img,svg{max-width:100%}
 .page{display:none}
 .page.active{display:block}
 
+/* ---------- Image frames: consistent shape, no stretching ---------- */
+.img-frame{position:relative;width:100%;overflow:hidden;border-radius:var(--radius);background:#eef2f8;line-height:0}
+.img-frame img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center;display:block}
+.img-frame.contain img{object-fit:contain;padding:8px}
+.ratio-banner{aspect-ratio:1400/380;min-height:150px}
+.ratio-about{aspect-ratio:1400/300;min-height:130px}
+.ratio-hero{aspect-ratio:7/5}
+.ratio-card{aspect-ratio:3/2}
+.ratio-wide{aspect-ratio:500/220}
+.ratio-square{aspect-ratio:1/1}
+.ratio-shield{aspect-ratio:1/1;max-width:380px;margin:0 auto}
+.img-frame.shadow{box-shadow:0 10px 30px rgba(7,26,51,.14)}
+
 .announce{background:var(--navy-dark);color:#f1e7cf;padding:10px 0;overflow:hidden;white-space:nowrap;border-bottom:1px solid #16304f;font-size:14px;font-weight:500}
 .announce:hover .announce-track{animation-play-state:paused}
 .announce-track{display:inline-block;padding-left:100%;animation:scrollLeft 28s linear infinite}
@@ -73,8 +86,17 @@ img,svg{max-width:100%}
 @media (prefers-reduced-motion:reduce){.announce-track{animation:none;padding-left:24px}}
 
 header.site{position:sticky;top:0;z-index:40;background:rgba(255,255,255,.96);backdrop-filter:blur(6px);border-bottom:1px solid var(--line)}
-.navrow{display:flex;align-items:center;justify-content:space-between;padding:14px 24px;gap:16px}
-.brand{display:flex;align-items:center;gap:10px;text-decoration:none;color:var(--navy);font-weight:700;font-size:19px;background:none;border:none;cursor:pointer;font-family:inherit}
+.navrow{display:flex;align-items:center;justify-content:space-between;padding:12px 24px;gap:16px}
+
+/* ---------- Brand: logo + wordmark side by side, vertically centred ---------- */
+.brand{display:inline-flex;flex-direction:row;align-items:center;gap:12px;text-decoration:none;color:var(--navy);background:none;border:none;cursor:pointer;font-family:inherit;padding:0;text-align:left;white-space:nowrap}
+.brand-logo{flex:none;width:42px;height:42px;display:block}
+.brand-text{display:flex;flex-direction:column;justify-content:center;align-items:flex-start;line-height:1}
+.brand-name{font-family:'Source Serif 4',Georgia,serif;font-weight:700;font-size:21px;letter-spacing:.01em;line-height:1.05;color:inherit}
+.brand-sub{font-family:'Inter',sans-serif;font-weight:600;font-size:9.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--gold);margin-top:4px;line-height:1}
+footer .brand{color:#fff;cursor:pointer;margin-bottom:12px}
+footer .brand-sub{color:var(--gold-light)}
+
 nav.main{display:flex;gap:24px;align-items:center}
 nav.main button{background:none;border:none;cursor:pointer;color:var(--ink);font-weight:500;font-size:15px;font-family:inherit;padding:4px 0}
 nav.main button.active,nav.main button:hover{color:var(--navy)}
@@ -85,6 +107,7 @@ nav.main button.active,nav.main button:hover{color:var(--navy)}
 #mobileMenu{display:none;flex-direction:column;gap:2px;padding:8px 24px 18px;border-top:1px solid var(--line)}
 #mobileMenu button{text-align:left;padding:12px 4px;background:none;border:none;border-bottom:1px solid var(--line);font-weight:500;font-family:inherit;font-size:15px;cursor:pointer}
 @media (max-width:860px){nav.main,.header-actions{display:none}.burger{display:inline-flex}#mobileMenu.open{display:flex}}
+@media (max-width:380px){.brand-name{font-size:18px}.brand-logo{width:36px;height:36px}.brand-sub{font-size:8.5px}}
 
 .hero{background:linear-gradient(160deg,var(--navy) 0%,var(--navy-dark) 100%);color:#fff;padding:60px 0 88px}
 .hero-grid{display:grid;grid-template-columns:1.1fr .9fr;gap:48px;align-items:center}
@@ -96,10 +119,8 @@ nav.main button.active,nav.main button:hover{color:var(--navy)}
 .cta-gold{background:var(--gold);color:var(--navy-dark);padding:13px 24px;border-radius:999px;font-weight:700;text-decoration:none;display:inline-block}
 .cta-outline{border:1.5px solid rgba(255,255,255,.5);color:#fff;padding:12px 24px;border-radius:999px;font-weight:600;text-decoration:none;display:inline-block;background:none;cursor:pointer;font-family:inherit;font-size:15px}
 
-.header-banner{width:100%;display:block;line-height:0}
-.header-banner svg{width:100%;height:auto;display:block}
-.about-banner{width:100%;display:block;line-height:0;margin-top:28px}
-.about-banner svg{width:100%;height:auto;display:block}
+.header-banner{width:100%}
+.about-banner{max-width:1180px;margin:30px auto 0;padding:0 24px}
 .page-hero{background:var(--navy);color:#fff;padding:52px 0 64px;text-align:center}
 .page-hero .eyebrow{justify-content:center;display:flex}
 .page-hero h1{color:#fff;font-size:clamp(26px,3.6vw,38px)}
@@ -151,7 +172,15 @@ details.faq[open] summary{color:var(--navy)}
 .chev{transition:transform .2s}
 details[open] .chev{transform:rotate(45deg)}
 
-.avatar{width:56px;height:56px;border-radius:50%;background:var(--navy);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700;font-family:'Source Serif 4',serif;margin-bottom:12px}
+/* ---------- Leadership cards with portraits ---------- */
+.leader-card{padding:0;overflow:hidden;text-align:center}
+.leader-photo{aspect-ratio:1/1;width:100%;overflow:hidden;background:#eef2f8;line-height:0}
+.leader-photo img{width:100%;height:100%;object-fit:cover;object-position:center top;display:block}
+.leader-info{padding:20px 22px 24px}
+.leader-info h3{font-size:18px;margin-bottom:4px;color:var(--navy)}
+.leader-info p{font-size:14px}
+.leader-info .role-line{width:32px;height:2px;background:var(--gold);margin:10px auto 10px;border-radius:2px}
+
 .timeline{border-left:2px solid var(--line);margin-left:10px;padding-left:24px}
 .timeline .item{position:relative;margin-bottom:28px}
 .timeline .item::before{content:'';position:absolute;left:-29.5px;top:4px;width:12px;height:12px;border-radius:50%;background:var(--gold)}
@@ -175,8 +204,8 @@ footer{background:var(--navy-dark);color:#cfd9e6;padding:52px 0 26px;font-size:1
 .foot-grid{display:grid;grid-template-columns:1.4fr 1fr 1fr 1fr;gap:32px}
 @media (max-width:760px){.foot-grid{grid-template-columns:1fr 1fr}}
 footer h4{color:#fff;font-size:14.5px;margin:0 0 14px;font-weight:600}
-footer a,footer button{color:#b9c6d6;text-decoration:none;display:block;margin-bottom:9px;background:none;border:none;cursor:pointer;font-family:inherit;font-size:14.3px;text-align:left;padding:0}
-footer a:hover,footer button:hover{color:#fff}
+footer a,footer button.flink{color:#b9c6d6;text-decoration:none;display:block;margin-bottom:9px;background:none;border:none;cursor:pointer;font-family:inherit;font-size:14.3px;text-align:left;padding:0}
+footer a:hover,footer button.flink:hover{color:#fff}
 .foot-bottom{border-top:1px solid rgba(255,255,255,.1);margin-top:36px;padding-top:20px;display:flex;justify-content:space-between;flex-wrap:wrap;gap:10px;font-size:13px;color:#8fa0b5}
 .social-row{display:flex;gap:10px;margin-top:6px}
 .social-row a{width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,.08);display:flex;align-items:center;justify-content:center;margin:0}
@@ -189,7 +218,7 @@ footer a:hover,footer button:hover{color:#fff}
 
 .modal-bg{position:fixed;inset:0;background:rgba(7,26,51,.55);display:none;align-items:center;justify-content:center;z-index:100;padding:20px}
 .modal-bg.open{display:flex}
-.modal{background:#fff;border-radius:16px;max-width:400px;width:100%;padding:30px;position:relative}
+.modal{background:#fff;border-radius:16px;max-width:400px;width:100%;padding:30px;position:relative;max-height:92vh;overflow-y:auto}
 .modal h3{color:var(--navy);margin-bottom:4px}
 .modal .close{position:absolute;top:14px;right:14px;background:none;border:none;cursor:pointer;color:var(--muted)}
 .demo-note{background:#fdf6e8;border:1px solid var(--gold-light);color:#6b5520;font-size:12.8px;padding:10px 12px;border-radius:9px;margin-bottom:16px}
@@ -203,9 +232,9 @@ footer a:hover,footer button:hover{color:#fff}
 
 <header class="site">
   <div class="navrow wrap">
-    <button class="brand" onclick="go('home')" aria-label="West Pec Global — home">
-      <svg width="34" height="34" viewBox="0 0 64 64"><rect width="64" height="64" rx="12" fill="#0b2545"/><path d="M16 44 L32 18 L48 44" stroke="#c6a15b" stroke-width="5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      &nbsp;West Pec Global
+    <button class="brand" onclick="go('home')" aria-label="West Pec Global International Bank — home">
+      <svg class="brand-logo" viewBox="0 0 64 64" aria-hidden="true"><defs><linearGradient id="lgH" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#14396e"/><stop offset="1" stop-color="#071a33"/></linearGradient></defs><rect width="64" height="64" rx="14" fill="url(#lgH)"/><rect x="2.5" y="2.5" width="59" height="59" rx="11.5" fill="none" stroke="#c6a15b" stroke-opacity=".6" stroke-width="1.2"/><path d="M13 19 L22.5 46 L32 27 L41.5 46 L51 19" fill="none" stroke="#ffffff" stroke-width="5.2" stroke-linejoin="miter" stroke-linecap="butt"/><path d="M20 53 H44" stroke="#c6a15b" stroke-width="2.5" stroke-linecap="round"/></svg>
+      <span class="brand-text"><span class="brand-name">West Pec Global</span><span class="brand-sub">International Bank</span></span>
     </button>
     <nav class="main" id="navMain">
       <button data-page="home" onclick="go('home')">Home</button>
@@ -237,7 +266,9 @@ footer a:hover,footer button:hover{color:#fff}
 
 <div class="page active" id="page-home">
   <div class="header-banner">
-    <img src="assets/images/home-header-banner.png.jpg" alt="Nassau harbour skyline at dusk — West Pec Global International Bank" width="1400" height="380" style="width:100%;height:auto;display:block">
+    <div class="img-frame ratio-banner" style="border-radius:0">
+      <img src="assets/images/home-header-banner.png.jpg" alt="Nassau harbour skyline at dusk — West Pec Global International Bank" width="1400" height="380">
+    </div>
   </div>
   <section class="hero" style="padding-top:60px">
     <div class="wrap hero-grid">
@@ -251,7 +282,9 @@ footer a:hover,footer button:hover{color:#fff}
         </div>
       </div>
       <div>
-        <img src="assets/images/home-hero-illustration.svg" alt="Illustration of a global account access network" width="420" height="300" style="width:100%;height:auto">
+        <div class="img-frame ratio-hero shadow">
+          <img src="assets/images/home-hero-illustration.png.jpg" alt="Illustration of a global account access network" width="420" height="300">
+        </div>
       </div>
     </div>
   </section>
@@ -327,7 +360,9 @@ footer a:hover,footer button:hover{color:#fff}
 <div class="page" id="page-about">
   <div class="page-hero"><div class="eyebrow">About Us</div><h1>A bank built around international life</h1><p>West Pec Global was founded to serve people and businesses whose financial lives cross borders.</p>
   <div class="about-banner">
-    <img src="assets/images/about-header-banner.png.jpg" alt="Illustration of the West Pec Global headquarters building" width="1400" height="300" style="width:100%;height:auto;display:block">
+    <div class="img-frame ratio-about shadow">
+      <img src="assets/images/about-header-banner.png.jpg" alt="Illustration of the West Pec Global headquarters building" width="1400" height="300">
+    </div>
   </div>
   </div>
   <section>
@@ -341,7 +376,9 @@ footer a:hover,footer button:hover{color:#fff}
           <div class="item"><b>24/7 digital banking</b>Rolled out secure online and mobile banking available worldwide.</div>
         </div>
       </div>
-      <img src="assets/images/about-story-illustration.png.jpg" alt="Illustration of the West Pec Global skyline" width="420" height="300" style="width:100%;height:auto">
+      <div class="img-frame ratio-hero shadow">
+        <img src="assets/images/about-story-illustration.png.jpg" alt="Illustration of the West Pec Global skyline" width="420" height="300">
+      </div>
     </div>
   </section>
   <section class="alt">
@@ -359,9 +396,18 @@ footer a:hover,footer button:hover{color:#fff}
     <div class="wrap">
       <div class="section-head"><div class="eyebrow">Leadership</div><h2>Leadership team</h2></div>
       <div class="grid3">
-        <div class="card"><div class="avatar">RT</div><h3 style="font-size:16px">R. Thackeray</h3><p>Chief Executive Officer</p></div>
-        <div class="card"><div class="avatar">AM</div><h3 style="font-size:16px">A. Mendes</h3><p>Chief Risk & Compliance Officer</p></div>
-        <div class="card"><div class="avatar">JK</div><h3 style="font-size:16px">J. Kolawole</h3><p>Head of International Banking</p></div>
+        <div class="card leader-card">
+          <div class="leader-photo"><img src="assets/images/leader-thackeray.svg" alt="Portrait of R. Thackeray, Chief Executive Officer" width="400" height="400"></div>
+          <div class="leader-info"><h3>R. Thackeray</h3><div class="role-line"></div><p>Chief Executive Officer</p></div>
+        </div>
+        <div class="card leader-card">
+          <div class="leader-photo"><img src="assets/images/leader-mendes.svg" alt="Portrait of A. Mendes, Chief Risk and Compliance Officer" width="400" height="400"></div>
+          <div class="leader-info"><h3>A. Mendes</h3><div class="role-line"></div><p>Chief Risk & Compliance Officer</p></div>
+        </div>
+        <div class="card leader-card">
+          <div class="leader-photo"><img src="assets/images/leader-kolawole.svg" alt="Portrait of J. Kolawole, Head of International Banking" width="400" height="400"></div>
+          <div class="leader-info"><h3>J. Kolawole</h3><div class="role-line"></div><p>Head of International Banking</p></div>
+        </div>
       </div>
     </div>
   </section>
@@ -375,17 +421,23 @@ footer a:hover,footer button:hover{color:#fff}
       <div class="card" style="margin-bottom:24px"><div class="grid2">
         <div><h3>Multi-Currency Account</h3><p>Hold balances in up to 12 major currencies within one account number, with transparent live conversion rates and no hidden spreads.</p>
           <ul class="feat"><li>✓ Personal or joint ownership</li><li>✓ Free currency conversion up to monthly limit</li><li>✓ Virtual and physical debit card</li><li>✓ Minimum opening deposit: $500</li></ul></div>
-        <img src="assets/images/account-multicurrency.png.jpg" alt="Illustration representing multiple currencies in one account" width="300" height="200" style="width:100%;height:auto">
+        <div class="img-frame ratio-card">
+          <img src="assets/images/account-multicurrency.png.jpg" alt="Illustration representing multiple currencies in one account" width="300" height="200">
+        </div>
       </div></div>
       <div class="card" style="margin-bottom:24px"><div class="grid2">
-        <img src="assets/images/account-business.png.jpg" alt="Illustration representing an international business account" width="300" height="200" style="width:100%;height:auto">
+        <div class="img-frame ratio-card">
+          <img src="assets/images/account-business.png.jpg" alt="Illustration representing an international business account" width="300" height="200">
+        </div>
         <div><h3>International Business Account</h3><p>Built for companies that pay suppliers or receive revenue internationally, with multi-user access and named banking contacts.</p>
           <ul class="feat"><li>✓ Multi-user access with permission levels</li><li>✓ International wire and local payment rails</li><li>✓ Incorporation documents required</li><li>✓ Minimum opening deposit: $2,500</li></ul></div>
       </div></div>
       <div class="card"><div class="grid2">
         <div><h3>Wealth & Savings Account</h3><p>Fixed-term and flexible savings options designed for clients managing assets across more than one country.</p>
           <ul class="feat"><li>✓ 3, 6, and 12-month fixed terms</li><li>✓ Flexible-access option with notice period</li><li>✓ Interest paid monthly or at maturity</li><li>✓ Minimum opening deposit: $1,000</li></ul></div>
-        <img src="assets/images/account-savings.svg" alt="Illustration representing a wealth and savings account" width="300" height="200" style="width:100%;height:auto">
+        <div class="img-frame ratio-card">
+          <img src="assets/images/account-savings.png.jpg" alt="Illustration representing a wealth and savings account" width="300" height="200">
+        </div>
       </div></div>
     </div>
   </section>
@@ -395,7 +447,6 @@ footer a:hover,footer button:hover{color:#fff}
   <div class="page-hero"><div class="eyebrow">Open an Account</div><h1>Start your international account application</h1><p>Applications are typically reviewed within 1–2 business days. All fields marked * are required.</p></div>
   <section>
     <div class="wrap" style="max-width:760px">
-      <div class="demo-note" style="background:#fdf6e8;border:1px solid #e4cd99;color:#6b5520;font-size:13px;padding:12px 14px;border-radius:9px;margin-bottom:26px">This is a demo application form. No information submitted here is stored, transmitted, or used to open a real account.</div>
       <form class="card" id="openAccountForm" onsubmit="submitApplication(event)">
 
         <h3 style="font-size:17px;color:var(--navy)">1. Account Type</h3>
@@ -489,7 +540,9 @@ footer a:hover,footer button:hover{color:#fff}
         <div class="shield-row"><div class="icon-badge"><svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M4 12h16M4 6h16M4 18h16" stroke="#0b2545" stroke-width="1.6" stroke-linecap="round"/></svg></div><div><h3 style="font-size:16.5px;margin-bottom:4px">Regulated custody</h3><p>Client funds are safeguarded under applicable Bahamian banking regulation.</p></div></div>
         <p style="font-size:13.6px;margin-top:18px">This page is a general description of West Pec Global's security practices and does not constitute a guarantee against all forms of loss. Full terms are available on request.</p>
       </div>
-      <img src="assets/images/security-shield.svg" alt="Illustration of a shield representing account security" width="320" height="320" style="width:100%;height:auto">
+      <div class="img-frame contain ratio-shield">
+        <img src="assets/images/security-shield.svg" alt="Illustration of a shield representing account security" width="320" height="320">
+      </div>
     </div>
   </section>
 </div>
@@ -497,7 +550,7 @@ footer a:hover,footer button:hover{color:#fff}
 <div class="page" id="page-contact">
   <div class="page-hero"><div class="eyebrow">Contact</div><h1>Talk to West Pec Global</h1><p>Our team typically responds within one business day.</p></div>
   <section>
-    <div class="wrap grid2">
+    <div class="wrap grid2" style="align-items:start">
       <div class="card">
         <h3 style="font-size:18px">Send a message</h3>
         <form onsubmit="event.preventDefault();var m=document.getElementById('cmsg');m.className='form-msg ok';m.textContent='Thank you — your message has been received. A member of our team will reply within 1 business day.';this.reset();">
@@ -514,8 +567,8 @@ footer a:hover,footer button:hover{color:#fff}
         <p><strong>Phone:</strong> <a href="tel:+12425550148">+1 (242) 555-0148</a></p>
         <p><strong>Email:</strong> <a href="mailto:accounts@westpecglobal.com">accounts@westpecglobal.com</a></p>
         <p><strong>Hours:</strong> Mon–Fri, 9:00–17:00 (EST), online banking available 24/7</p>
-        <div style="border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;margin-bottom:16px">
-          <img src="assets/images/contact-branch.svg" alt="Illustration of the West Pec Global branch entrance on Bay Street, Nassau" width="500" height="220" style="display:block;width:100%;height:auto">
+        <div class="img-frame ratio-wide" style="margin-bottom:16px;border:1px solid var(--line)">
+          <img src="assets/images/contact-branch.png.jpg" alt="Illustration of the West Pec Global branch entrance on Bay Street, Nassau" width="500" height="220">
         </div>
         <div class="map-box">Map placeholder — Bay Street, Nassau</div>
       </div>
@@ -552,9 +605,9 @@ footer a:hover,footer button:hover{color:#fff}
 <footer>
   <div class="wrap foot-grid">
     <div>
-      <div class="brand" style="color:#fff;margin-bottom:12px;cursor:default" onclick="go('home')">
-        <svg width="30" height="30" viewBox="0 0 64 64"><rect width="64" height="64" rx="12" fill="#13335c"/><path d="M16 44 L32 18 L48 44" stroke="#c6a15b" stroke-width="5" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
-        &nbsp;West Pec Global
+      <div class="brand" role="button" tabindex="0" onclick="go('home')" onkeydown="if(event.key==='Enter')go('home')" aria-label="West Pec Global — home">
+        <svg class="brand-logo" viewBox="0 0 64 64" aria-hidden="true"><defs><linearGradient id="lgF" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#1a427d"/><stop offset="1" stop-color="#0b2545"/></linearGradient></defs><rect width="64" height="64" rx="14" fill="url(#lgF)"/><rect x="2.5" y="2.5" width="59" height="59" rx="11.5" fill="none" stroke="#c6a15b" stroke-opacity=".6" stroke-width="1.2"/><path d="M13 19 L22.5 46 L32 27 L41.5 46 L51 19" fill="none" stroke="#ffffff" stroke-width="5.2" stroke-linejoin="miter" stroke-linecap="butt"/><path d="M20 53 H44" stroke="#c6a15b" stroke-width="2.5" stroke-linecap="round"/></svg>
+        <span class="brand-text"><span class="brand-name">West Pec Global</span><span class="brand-sub">International Bank</span></span>
       </div>
       <p style="color:#9fb0c3;font-size:13.8px;max-width:30ch">West Pec Global International Bank Ltd. is headquartered in Nassau, The Bahamas.</p>
       <div class="social-row">
@@ -562,9 +615,9 @@ footer a:hover,footer button:hover{color:#fff}
         <a href="#" aria-label="X / Twitter"><svg width="16" height="16" viewBox="0 0 24 24" fill="#cfd9e6"><path d="M3 3l7.5 9.5L3.3 21h2.4l6-6.9 4.8 6.9H21l-7.9-10 7-8.1h-2.4l-5.5 6.3L8 3z"/></svg></a>
       </div>
     </div>
-    <div><h4>Banking</h4><button onclick="go('accounts')">Account Types</button><button onclick="go('home');setTimeout(()=>location.hash='#faq',10)">FAQ</button><a href="/login.html">Online Banking Login</a></div>
-    <div><h4>Company</h4><button onclick="go('about')">About Us</button><button onclick="go('security')">Security</button><button onclick="go('contact')">Contact</button></div>
-    <div><h4>Legal</h4><button onclick="go('privacy')">Privacy Policy</button><button onclick="go('terms')">Terms & Conditions</button></div>
+    <div><h4>Banking</h4><button class="flink" onclick="go('accounts')">Account Types</button><button class="flink" onclick="go('home');setTimeout(()=>location.hash='#faq',10)">FAQ</button><a href="/login.html">Online Banking Login</a></div>
+    <div><h4>Company</h4><button class="flink" onclick="go('about')">About Us</button><button class="flink" onclick="go('security')">Security</button><button class="flink" onclick="go('contact')">Contact</button></div>
+    <div><h4>Legal</h4><button class="flink" onclick="go('privacy')">Privacy Policy</button><button class="flink" onclick="go('terms')">Terms & Conditions</button></div>
   </div>
   <div class="wrap foot-bottom">
     <span>© <span id="yr"></span> West Pec Global International Bank Ltd. All rights reserved.</span>
