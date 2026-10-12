@@ -111,7 +111,7 @@ async function renderOverview(){
 
     <div class="section-label">Market Overview</div>
     <div class="card" style="margin-bottom:20px;">
-      <div class="card-title"><i class="fa-solid fa-chart-line"></i> All Coins ${liveAny ? '<span class="pill pill-cyan"><span class="badge-dot"></span> Live</span>' : '<span class="pill pill-amber">Offline / demo prices</span>'}</div>
+      <div class="card-title"><i class="fa-solid fa-chart-line"></i> All Coins ${liveAny ? '<span class="pill pill-cyan"><span class="badge-dot"></span> Live</span>' : '<span class="pill pill-amber">Offline prices</span>'}</div>
       <div class="grid-2">${marketHtml}</div>
     </div>
 
@@ -501,10 +501,10 @@ async function renderDepositAddresses(){
   document.getElementById('view-deposits').innerHTML = `
     <div class="card" style="max-width:560px;margin-bottom:20px;">
       <div class="card-title"><i class="fa-solid fa-qrcode"></i> Add / Update Deposit Address</div>
-      <p class="muted" style="font-size:13px;margin-top:-8px;">This is the demo wallet address users will see and copy when they choose to deposit a given coin on a given network. Paste any placeholder address you like — no real funds are involved.</p>
+      <p class="muted" style="font-size:13px;margin-top:-8px;">This is the wallet address users will see and copy when they choose to deposit a given coin on a given network. Paste any placeholder address you like — no real funds are involved.</p>
       <div class="field" style="margin-bottom:10px;"><label>Coin</label><select id="daCoin" onchange="refreshDaNetworks()">${coinOptions}</select></div>
       <div class="field" style="margin-bottom:10px;"><label>Network</label><select id="daNetwork"></select></div>
-      <div class="field"><label>Demo Wallet Address</label><input id="daAddress" placeholder="Paste a demo address for this coin/network"></div>
+      <div class="field"><label>Wallet Address</label><input id="daAddress" placeholder="Paste an address for this coin/network"></div>
       <button class="btn btn-primary btn-block" onclick="saveDepositAddress()">Save Address</button>
     </div>
 
