@@ -168,7 +168,7 @@ async function renderDashboard(){
     </div>
 
     <div class="section-label">Market Overview</div>
-    <div class="card"><div class="card-title"><i class="fa-solid fa-chart-line"></i> All Coins ${liveAny ? '<span class="pill pill-cyan"><span class="badge-dot"></span> Live</span>' : '<span class="pill pill-amber">Offline / demo prices</span>'}</div><div class="grid-2">${marketHtml}</div></div>
+    <div class="card"><div class="card-title"><i class="fa-solid fa-chart-line"></i> All Coins ${liveAny ? '<span class="pill pill-cyan"><span class="badge-dot"></span> Live</span>' : '<span class="pill pill-amber">Offline prices</span>'}</div><div class="grid-2">${marketHtml}</div></div>
 
     <div class="section-label">Quick Actions</div>
     <div class="grid-3">
@@ -369,8 +369,8 @@ async function renderDeposit(){
   const coinOptions = Object.keys(REF.coins).map(c=>`<option value="${c}">${c} — ${REF.coins[c].name}</option>`).join('');
   document.getElementById('view-deposit').innerHTML = `
     <div class="card" style="max-width:520px;">
-      <div class="card-title"><i class="fa-solid fa-arrow-down"></i> Deposit (Demo)</div>
-      <p class="muted" style="font-size:13px;">This is a simulated deposit flow. Select a coin and network to see the platform's demo deposit address. Your administrator credits deposits manually on this demo platform once you notify them.</p>
+      <div class="card-title"><i class="fa-solid fa-arrow-down"></i> Deposit</div>
+      <p class="muted" style="font-size:13px;">This is a simulated deposit flow. Select a coin and network to see the platform's deposit address. Your administrator credits deposits manually on this platform once you notify them.</p>
       <div class="field"><label>Coin</label><select id="depCoin" onchange="refreshDepNetworks()">${coinOptions}</select></div>
       <div class="field"><label>Network</label><select id="depNetwork"></select></div>
       <div id="depAddressBox"></div>
@@ -394,12 +394,12 @@ function refreshDepAddress(){
   if(match){
     box.innerHTML = `
       <div class="creds-box">
-        <div class="coin-meta" style="margin-bottom:8px;">Send ${coin} (${network}) only to this demo address:</div>
+        <div class="coin-meta" style="margin-bottom:8px;">Send ${coin} (${network}) only to this address:</div>
         <div class="row gap-8" style="justify-content:space-between;">
           <div class="mono" style="word-break:break-all;color:var(--cyan);flex:1;">${match.address}</div>
           <button class="btn btn-outline btn-sm" onclick="copyText('${match.address}', this)"><i class="fa-solid fa-copy"></i></button>
         </div>
-        <div class="hint" style="margin-top:10px;">No real network — this is a demo address for testing. Notify your administrator after sending so they can credit your balance.</div>
+        <div class="hint" style="margin-top:10px;">No real network — this address is for testing. Notify your administrator after sending so they can credit your balance.</div>
       </div>
     `;
   } else {
@@ -497,11 +497,11 @@ async function renderBuy(){
   document.getElementById('view-buy').innerHTML = `
     <div class="card" style="max-width:480px;">
       <div class="card-title"><i class="fa-solid fa-cart-shopping"></i> Buy Crypto</div>
-      <p class="muted" style="font-size:13px;">Buying with a real card or bank transfer isn't wired up in this demo. In a production build, this is where you'd hand off to a payment/on-ramp provider.</p>
+      <p class="muted" style="font-size:13px;">Buying with a real card or bank transfer isn't wired up on this platform. In a production build, this is where you'd hand off to a payment/on-ramp provider.</p>
       <div class="field"><label>Coin</label><select id="buyCoin">${coinOptions}</select></div>
       <div class="field"><label>Amount (USD)</label><input id="buyAmount" type="number" min="0" step="1" placeholder="e.g. 100"></div>
       <a href="https://www.coingecko.com/en/exchanges" target="_blank" rel="noopener" class="btn btn-primary btn-block">
-        <i class="fa-solid fa-arrow-up-right-from-square"></i> Continue to Payment (Demo Redirect)
+        <i class="fa-solid fa-arrow-up-right-from-square"></i> Continue to Payment
       </a>
       <div class="hint" style="margin-top:8px;">This link is illustrative only — for testing, ask your administrator to credit crypto to your account instead.</div>
     </div>
@@ -520,7 +520,7 @@ async function renderKyc(){
       </button>
     ` : status==='pending' ? `
       <div class="warn-box" style="margin-top:16px;">
-        <i class="fa-solid fa-hourglass-half"></i> Your account upgrade request has been received. This is a demo platform, so no real documents are processed — in a production build, our team would review your ID here within 24-48 hours.
+        <i class="fa-solid fa-hourglass-half"></i> Your account upgrade request has been received. This is a simulated platform, so no real documents are processed — in a production build, our team would review your ID here within 24-48 hours.
       </div>
     ` : `
       <div class="reject-banner" style="border-color:#bfe3cd;background:#e9f6ee;color:#1e7a46;margin-top:16px;">
@@ -532,7 +532,7 @@ async function renderKyc(){
     <div class="card" style="max-width:480px;">
       <div class="card-title"><i class="fa-solid fa-id-card"></i> KYC Verification</div>
       <div class="row gap-8" style="margin-bottom:14px;">${statusPill}</div>
-      <p class="muted" style="font-size:13px;">Upgrading your account unlocks higher demo withdrawal limits. This is a simulated platform for testing — no real identity documents are collected or verified.</p>
+      <p class="muted" style="font-size:13px;">Upgrading your account unlocks higher withdrawal limits. This is a simulated platform for testing — no real identity documents are collected or verified.</p>
       ${actionArea}
     </div>
   `;
@@ -575,7 +575,7 @@ async function renderSupport(){
           <p>Not yet configured by admin.</p>
         </div>`}
       </div>
-      <div class="hint" style="margin-top:16px;">This demo platform has no live chat — for withdrawal issues, also check the reason shown on your Transactions page after a rejection.</div>
+      <div class="hint" style="margin-top:16px;">This platform has no live chat — for withdrawal issues, also check the reason shown on your Transactions page after a rejection.</div>
     </div>
   `;
 }
