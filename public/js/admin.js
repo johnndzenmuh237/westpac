@@ -30,7 +30,7 @@ function fmtCoin(n){ n=Number(n)||0; return (Math.round(n*1e6)/1e6).toString(); 
 function fmtDate(ts){ const d=new Date(ts); return d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})+' · '+d.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'}); }
 function shortAddr(a){ if(!a) return ''; return a.length>18 ? a.slice(0,8)+'…'+a.slice(-6) : a; }
 function txTypeLabel(t){
-  if(t.type==='credit') return t.coin ? 'Deposit (Admin Credit)' : 'Deposit (USD)';
+  if(t.type==='credit') return t.coin ? 'Deposit' : 'Deposit (USD)';
   if(t.type==='withdraw_bank') return 'Withdraw to Bank';
   if(t.type==='withdraw_crypto') return 'Withdraw to Crypto';
   if(t.type==='swap') return 'Swap';

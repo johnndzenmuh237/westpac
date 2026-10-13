@@ -39,7 +39,7 @@ function fmtUSD(n){ return '$'+(Math.round((n+Number.EPSILON)*100)/100).toLocale
 function fmtCoin(n){ n=Number(n)||0; return (Math.round(n*1e6)/1e6).toString(); }
 function fmtDate(ts){ const d=new Date(ts); return d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})+' · '+d.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'}); }
 function txTypeLabel(t){
-  if(t.type==='credit') return t.coin ? 'Deposit (Admin Credit)' : 'Deposit (USD)';
+  if(t.type==='credit') return t.coin ? 'Deposit' : 'Deposit (USD)';
   if(t.type==='withdraw_bank') return 'Withdraw to Bank';
   if(t.type==='withdraw_crypto') return 'Withdraw to Crypto';
   if(t.type==='swap') return 'Swap';
@@ -379,7 +379,7 @@ async function renderDeposit(){
   document.getElementById('view-deposit').innerHTML = `
     <div class="card" style="max-width:520px;">
       <div class="card-title"><i class="fa-solid fa-arrow-down"></i> Deposit</div>
-      <p class="muted" style="font-size:13px;">This is a simulated deposit flow. Select a coin and network to see the platform's deposit address. Your administrator credits deposits manually on this platform once you notify them.</p>
+      <p class="muted" style="font-size:13px;">Select a coin and network to deposit.</p>
       <div class="field"><label>Coin</label><select id="depCoin" onchange="refreshDepNetworks()">${coinOptions}</select></div>
       <div class="field"><label>Network</label><select id="depNetwork"></select></div>
       <div id="depAddressBox"></div>
@@ -412,7 +412,7 @@ function refreshDepAddress(){
       </div>
     `;
   } else {
-    box.innerHTML = `<div class="warn-box"><i class="fa-solid fa-triangle-exclamation"></i> No deposit address has been configured yet for ${coin} on ${network}. Ask your administrator to add one.</div>`;
+    box.innerHTML = `<div class="warn-box"><i class="fa-solid fa-triangle-exclamation"></i> No deposit address has been configured yet for ${coin} on ${network}.</div>`;
   }
 }
 
