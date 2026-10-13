@@ -557,16 +557,25 @@ async function deleteDepositAddress(id){
   }catch(e){ toast(e.message,'err'); }
 }
 
-/* ---------------- Support Settings (contact info shown to users) ---------------- */
+/* ---------------- Support Settings + Tawk.to live chat ---------------- */
 async function renderSupportSettings(){
   const settings = await api('/admin/support-settings');
+  let tawk = { url:'' };
+  try{ tawk = await api('/admin/tawk'); }catch(e){ /* tawk route not available yet */ }
   document.getElementById('view-support').innerHTML = `
-    <div class="card" style="max-width:480px;">
+    <div class="card" style="max-width:480px;margin-bottom:20px;">
       <div class="card-title"><i class="fa-solid fa-headset"></i> Support Contact Details</div>
-      <p class="muted" style="font-size:13px;margin-top:-8px;">These are shown to every user on their Support page, with clickable email and WhatsApp buttons.</p>
-      <div class="field"><label>Support Email</label><input id="suppEmail" value="${settings.email||''}" placeholder="support@example.com"></div>
-      <div class="field"><label>WhatsApp Number</label><input id="suppWhatsapp" value="${settings.whatsapp||''}" placeholder="+1 555 123 4567"></div>
+      <p class="muted" style="font-size:13px;margin-top:-8px;">Saved contact details for the platform.</p>
+      <div class="field"><label>Support Email</label><input id="suppEmail" value="${esc(settings.email||'')}" placeholder="support@example.com"></div>
+      <div class="field"><label>WhatsApp Number</label><input id="suppWhatsapp" value="${esc(settings.whatsapp||'')}" placeholder="+1 555 123 4567"></div>
       <button class="btn btn-primary btn-block" onclick="saveSupportSettings()">Save Contact Details</button>
+    </div>
+
+    <div class="card" style="max-width:480px;">
+      <div class="card-title"><i class="fa-solid fa-comments"></i> Tawk.to Live Chat</div>
+      <p class="muted" style="font-size:13px;margin-top:-8px;">Paste your Tawk widget address (looks like <span class="mono">https://embed.tawk.to/PROPERTY_ID/WIDGET_ID</span>). Leave empty to turn the chat off.</p>
+      <div class="field"><label>Tawk widget address</label><input id="tawkUrl" value="${esc(tawk.url||'')}" placeholder="https://embed.tawk.to/xxxxxxxx/xxxxxxxx"></div>
+      <button class="btn btn-primary btn-block" onclick="saveTawk()">Save Tawk Address</button>
     </div>
   `;
 }
@@ -576,6 +585,13 @@ async function saveSupportSettings(){
   try{
     await api('/admin/support-settings', { method:'PUT', body:{ email, whatsapp } });
     toast('Support contact details saved','ok');
+  }catch(e){ toast(e.message,'err'); }
+}
+async function saveTawk(){
+  const url = document.getElementById('tawkUrl').value.trim();
+  try{
+    await api('/admin/tawk', { method:'PUT', body:{ url } });
+    toast(url ? 'Tawk live chat saved' : 'Tawk live chat turned off','ok');
   }catch(e){ toast(e.message,'err'); }
 }
 
