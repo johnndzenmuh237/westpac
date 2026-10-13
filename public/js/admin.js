@@ -45,8 +45,20 @@ function txAmountLabel(t){
   if(t.type==='credit') return t.coin ? '+'+fmtCoin(t.amount)+' '+t.coin+' ('+t.network+')' : '+'+fmtUSD(t.usdAmount);
   return '—';
 }
-function openModal(html){
-  document.getElementById('modalRoot').innerHTML = `<div class="modal-overlay" id="ov"><div class="modal">${html}</div></div>`;
+function esc(x){ const d=document.createElement('div'); d.textContent=(x==null?'':String(x)); return d.innerHTML; }
+/* Clean data list. cols: [{l:'Label', w:'1fr', cls:'first|num|act'}], rows: arrays of cell HTML */
+function dt(cols, rows){
+  const tpl = cols.map(c=>c.w||'minmax(0,1fr)').join(' ');
+  const head = cols.map(c=>`<div class="${c.cls||''}">${c.l}</div>`).join('');
+  const body = rows.map(r=>`<div class="dt-row">${cols.map((c,i)=>{
+    const cls = c.cls||'';
+    const inner = (cls.includes('first')||cls.includes('act')) ? r[i] : `<span class="v">${r[i]}</span>`;
+    return `<div class="dt-c ${cls}" data-label="${c.l}">${inner}</div>`;
+  }).join('')}</div>`).join('');
+  return `<div class="dt" style="--cols:${tpl}"><div class="dt-head">${head}</div>${body}</div>`;
+}
+function openModal(html, wide){
+  document.getElementById('modalRoot').innerHTML = `<div class="modal-overlay" id="ov"><div class="modal${wide?' wide':''}">${html}</div></div>`;
   document.getElementById('ov').addEventListener('click', e=>{ if(e.target.id==='ov') closeModal(); });
 }
 function closeModal(){ document.getElementById('modalRoot').innerHTML=''; }
@@ -58,7 +70,7 @@ function toggleSidebar(open){
 
 async function nav(view, arg){
   currentView = view;
-  ['overview','createuser','users','edituser','deposits','support','withdrawals'].forEach(v=>document.getElementById('view-'+v).classList.toggle('hidden', v!==view));
+  ['overview','createuser','users','edituser','deposits','support','withdrawals','applications'].forEach(v=>document.getElementById('view-'+v).classList.toggle('hidden', v!==view));
   const highlight = view==='edituser' ? 'users' : view;
   document.querySelectorAll('.nav-item[data-view]').forEach(el=>el.classList.toggle('active', el.dataset.view===highlight));
   toggleSidebar(false);
@@ -69,7 +81,9 @@ async function nav(view, arg){
   if(view==='deposits') await renderDepositAddresses();
   if(view==='support') await renderSupportSettings();
   if(view==='withdrawals') await renderWithdrawals();
+  if(view==='applications') await renderApplications();
   await refreshBadge();
+  if(typeof refreshAppBadge==='function') refreshAppBadge();
 }
 setInterval(()=>{ if(currentView==='overview') renderOverview(); }, 30000);
 async function refreshBadge(){
@@ -103,7 +117,7 @@ async function renderOverview(){
   const liveAny = Object.values(REF.coins).some(c=>c.live);
 
   document.getElementById('view-overview').innerHTML = `
-    <div class="grid-3" style="margin-bottom:20px;">
+    <div class="stats" style="margin-bottom:20px;">
       <div class="card"><div class="muted" style="font-size:12.5px;margin-bottom:8px;">Total Users</div><div style="font-size:26px;font-weight:800;">${users.length}</div></div>
       <div class="card"><div class="muted" style="font-size:12.5px;margin-bottom:8px;">Total USD Balances</div><div style="font-size:26px;font-weight:800;color:var(--green);">${fmtUSD(totalUSD)}</div></div>
       <div class="card"><div class="muted" style="font-size:12.5px;margin-bottom:8px;">Total Crypto Value</div><div style="font-size:26px;font-weight:800;color:var(--cyan);">${fmtUSD(totalCrypto)}</div></div>
@@ -117,9 +131,14 @@ async function renderOverview(){
 
     <div class="card">
       <div class="card-title"><i class="fa-solid fa-clock-rotate-left"></i> Recent Activity ${pending>0?`<span class="pill pill-amber">${pending} pending</span>`:''}</div>
-      ${feed.length ? `<table><thead><tr><th>User</th><th>Type</th><th>Amount</th><th>Status</th><th>When</th></tr></thead><tbody>${
-        feed.map(t=>`<tr><td>${t.user?.name||'—'}<div class="mono">@${t.user?.username||''}</div></td><td>${txTypeLabel(t)}</td><td>${txAmountLabel(t)}</td><td><span class="status-chip status-${t.status}">${t.status}</span></td><td class="muted">${fmtDate(t.createdAt)}</td></tr>`).join('')
-      }</tbody></table>` : '<div class="empty-state">No activity yet. Create a user and credit a balance to get started.</div>'}
+      ${feed.length ? dt([
+        {l:'User',w:'minmax(0,1.3fr)',cls:'first'},{l:'Type',w:'minmax(0,1.2fr)'},{l:'Amount',w:'minmax(0,1.6fr)'},{l:'Status',w:'90px'},{l:'When',w:'minmax(0,1.3fr)'}
+      ], feed.map(t=>[
+        `<span class="strong">${esc(t.user?.name||'—')}</span><span class="sub mono">@${esc(t.user?.username||'')}</span>`,
+        txTypeLabel(t), txAmountLabel(t),
+        `<span class="status-chip status-${t.status}">${t.status}</span>`,
+        `<span class="muted">${fmtDate(t.createdAt)}</span>`
+      ])) : '<div class="empty-state">No activity yet. Create a user and credit a balance to get started.</div>'}
     </div>
   `;
 }
@@ -313,24 +332,18 @@ async function renderUsers(){
   document.getElementById('view-users').innerHTML = `
     <div class="card">
       <div class="card-title"><i class="fa-solid fa-users"></i> All Users</div>
-      <table>
-        <thead><tr><th>Name</th><th>Username</th><th>USD Balance</th><th>Crypto Value</th><th></th></tr></thead>
-        <tbody>
-        ${users.map(u=>{
-          const cryptoVal = Object.values(u.holdings).reduce((s,h)=>s+h.balance*(REF.coins[h.coin]?.price||0),0);
-          return `<tr>
-            <td>${u.name}<div class="mono">${u.email}</div>${u.accountType?`<span class="pill pill-purple" style="margin-top:4px;padding:2px 9px;font-size:11px;">${u.accountType}</span>`:''}</td>
-            <td class="mono">@${u.username}</td>
-            <td>${fmtUSD(u.usdBalance)}</td>
-            <td>${fmtUSD(cryptoVal)}</td>
-            <td style="text-align:right;white-space:nowrap;">
-              <button class="btn btn-primary btn-sm" onclick="openUserDashboard('${u.id}')" title="Open this user's dashboard"><i class="fa-solid fa-arrow-up-right-from-square"></i> Dashboard</button>
-              <button class="btn btn-outline btn-sm" onclick="openManageUser('${u.id}')">Manage</button>
-            </td>
-          </tr>`;
-        }).join('')}
-        </tbody>
-      </table>
+      ${dt([
+        {l:'Name',w:'minmax(0,2fr)',cls:'first'},{l:'Username',w:'minmax(0,1.2fr)'},
+        {l:'USD Balance',w:'minmax(0,1fr)',cls:'num'},{l:'Crypto Value',w:'minmax(0,1fr)',cls:'num'},{l:'',w:'220px',cls:'act'}
+      ], users.map(u=>{
+        const cryptoVal = Object.values(u.holdings).reduce((s,h)=>s+h.balance*(REF.coins[h.coin]?.price||0),0);
+        return [
+          `<span class="strong">${esc(u.name)}</span><span class="sub mono">${esc(u.email)}</span>${u.accountType?`<span class="pill pill-purple" style="margin-top:6px;padding:2px 9px;font-size:11px;">${esc(u.accountType)}</span>`:''}`,
+          `<span class="mono">@${esc(u.username)}</span>`, fmtUSD(u.usdBalance), fmtUSD(cryptoVal),
+          `<button class="btn btn-primary btn-sm" onclick="openUserDashboard('${u.id}')"><i class="fa-solid fa-arrow-up-right-from-square"></i> Dashboard</button>
+           <button class="btn btn-outline btn-sm" onclick="openManageUser('${u.id}')">Manage</button>`
+        ];
+      }))}
     </div>
   `;
 }
@@ -338,16 +351,16 @@ async function renderUsers(){
 async function openManageUser(userId){
   const u = await api('/admin/users/'+userId);
   const holdingsRows = Object.values(u.holdings).map(h=>`
-    <div class="list-row">
-      <div class="row gap-8">
-        ${coinIconHTML(h.coin, 30)}
+    <div class="holding-edit">
+      <div class="who">
+        ${coinIconHTML(h.coin, 32)}
         <div>
           <div style="font-weight:600;">${h.coin} <span class="muted" style="font-weight:500;">· ${h.network}</span></div>
           <div class="mono">${fmtCoin(h.balance)} ${h.coin} ≈ ${fmtUSD(h.balance*(REF.coins[h.coin]?.price||0))}</div>
         </div>
       </div>
-      <div class="row gap-8">
-        <input type="number" step="any" id="editBal_${h.coin}_${h.network}" value="${h.balance}" style="width:100px;background:var(--bg-soft);border:1px solid var(--border-solid);color:var(--text);padding:7px 9px;border-radius:7px;font-size:13px;">
+      <div class="set">
+        <input type="number" step="any" id="editBal_${h.coin}_${h.network}" value="${h.balance}">
         <button class="btn btn-outline btn-sm" onclick="setHoldingBalance('${u.id}','${h.coin}','${h.network}')">Set</button>
       </div>
     </div>`).join('') || '<div class="empty-state" style="padding:16px;">No crypto credited yet.</div>';
@@ -357,7 +370,7 @@ async function openManageUser(userId){
 
   openModal(`
     <h3>Manage: ${u.name}</h3>
-    <p class="muted mono" style="font-size:12.5px;margin-top:-4px;">@${u.username} · ${u.email}</p>
+    <p class="muted mono" style="font-size:12.5px;margin-top:-4px;">@${esc(u.username)} · ${esc(u.email)}</p>
     <button class="btn btn-primary btn-block btn-sm" onclick="openUserDashboard('${u.id}')"><i class="fa-solid fa-arrow-up-right-from-square"></i> Open ${u.name.split(' ')[0]}'s Dashboard</button>
 
     <div class="card" style="padding:16px;margin:14px 0;background:var(--bg-soft);">
@@ -405,10 +418,11 @@ async function openManageUser(userId){
 
     <div class="card" style="padding:16px;margin-bottom:14px;background:var(--bg-soft);">
       <div class="card-title" style="font-size:13.5px;margin-bottom:8px;"><i class="fa-solid fa-dollar-sign"></i> Current USD Balance</div>
-      <div class="row gap-8">
-        <input type="number" step="0.01" id="usdEdit" value="${u.usdBalance}" style="flex:1;background:var(--panel);border:1px solid var(--border-solid);color:var(--text);padding:9px 11px;border-radius:8px;">
-        <button class="btn btn-outline btn-sm" onclick="setUsdBalance('${u.id}')">Override (no history entry)</button>
+      <div class="inline-form">
+        <input type="number" step="0.01" id="usdEdit" value="${u.usdBalance}">
+        <button class="btn btn-outline btn-sm" onclick="setUsdBalance('${u.id}')">Override</button>
       </div>
+      <div style="font-size:12px;color:var(--text-faint);margin-top:8px;">Overrides the balance directly — no history entry is created.</div>
     </div>
 
     <div class="card" style="padding:16px;background:var(--bg-soft);">
@@ -417,7 +431,7 @@ async function openManageUser(userId){
     </div>
 
     <button class="btn btn-outline btn-block" style="margin-top:16px;" onclick="closeModal()">Close</button>
-  `);
+  `, true);
   refreshCreditNetworks();
 }
 function setCreditType(type){
@@ -510,13 +524,12 @@ async function renderDepositAddresses(){
 
     <div class="card">
       <div class="card-title"><i class="fa-solid fa-list"></i> Configured Addresses</div>
-      ${addresses.length ? `<table><thead><tr><th>Coin</th><th>Network</th><th>Address</th><th></th></tr></thead><tbody>${
-        addresses.map(a=>`<tr>
-          <td>${a.coin}</td><td>${a.network}</td>
-          <td class="mono">${shortAddr(a.address)}</td>
-          <td style="text-align:right;"><button class="btn btn-danger btn-sm" onclick="deleteDepositAddress('${a._id}')">Remove</button></td>
-        </tr>`).join('')
-      }</tbody></table>` : '<div class="empty-state">No deposit addresses configured yet. Users will see "not yet configured" until you add one per coin/network.</div>'}
+      ${addresses.length ? dt([
+        {l:'Coin',w:'minmax(0,.8fr)',cls:'first'},{l:'Network',w:'minmax(0,1fr)'},{l:'Address',w:'minmax(0,2.2fr)'},{l:'',w:'100px',cls:'act'}
+      ], addresses.map(a=>[
+        `<span class="strong">${esc(a.coin)}</span>`, esc(a.network), `<span class="mono">${esc(shortAddr(a.address))}</span>`,
+        `<button class="btn btn-danger btn-sm" onclick="deleteDepositAddress('${a._id}')">Remove</button>`
+      ])) : '<div class="empty-state">No deposit addresses configured yet. Users will see "not yet configured" until you add one per coin/network.</div>'}
     </div>
   `;
   refreshDaNetworks();
@@ -578,37 +591,32 @@ async function renderWithdrawals(){
   document.getElementById('view-withdrawals').innerHTML = `
     <div class="card">
       <div class="card-title"><i class="fa-solid fa-building-columns"></i> Withdrawal Requests</div>
-      <table>
-        <thead><tr><th>User</th><th>Type</th><th>Details</th><th>Amount</th><th>Status</th><th></th></tr></thead>
-        <tbody>
-        ${rows.map(t=>{
-          let details = '';
-          if(t.type==='withdraw_bank'){
-            const b=t.bankDetails||{};
-            details = `${b.bankName||''}<br><span class="mono">${b.accountNumber||''}</span><br>${b.accountName||''}`;
-          } else {
-            details = `${t.coin} · ${t.network}<br><span class="mono">${shortAddr(t.walletAddress)}</span>`;
-          }
-          let actions = '';
-          if(t.status==='pending'){
-            actions = `<button class="btn btn-primary btn-sm" onclick="approveWithdrawal('${t._id}')"><i class="fa-solid fa-check"></i> Approve</button>
-                       <button class="btn btn-danger btn-sm" onclick="openRejectModal('${t._id}')"><i class="fa-solid fa-xmark"></i> Reject</button>`;
-          } else if(t.status==='rejected'){
-            actions = `<span class="mono" style="font-size:11.5px;">${(t.rejectionReason||'').slice(0,40)}</span>`;
-          } else {
-            actions = '<span class="muted" style="font-size:12px;">Resolved</span>';
-          }
-          return `<tr>
-            <td>${t.user?.name||'—'}<div class="mono">@${t.user?.username||''}</div></td>
-            <td>${txTypeLabel(t)}</td>
-            <td style="font-size:12.5px;">${details}</td>
-            <td>${txAmountLabel(t)}</td>
-            <td><span class="status-chip status-${t.status}">${t.status}</span></td>
-            <td style="text-align:right;">${actions}</td>
-          </tr>`;
-        }).join('')}
-        </tbody>
-      </table>
+      ${dt([
+        {l:'User',w:'minmax(0,1.3fr)',cls:'first'},{l:'Type',w:'minmax(0,1fr)'},{l:'Details',w:'minmax(0,1.5fr)'},
+        {l:'Amount',w:'minmax(0,1.1fr)'},{l:'Status',w:'90px'},{l:'',w:'176px',cls:'act'}
+      ], rows.map(t=>{
+        let details;
+        if(t.type==='withdraw_bank'){
+          const b=t.bankDetails||{};
+          details = `${esc(b.bankName||'')}<span class="sub mono">${esc(b.accountNumber||'')}</span><span class="sub">${esc(b.accountName||'')}</span>`;
+        } else {
+          details = `${esc(t.coin)} · ${esc(t.network)}<span class="sub mono">${esc(shortAddr(t.walletAddress))}</span>`;
+        }
+        let actions = '';
+        if(t.status==='pending'){
+          actions = `<button class="btn btn-primary btn-sm" onclick="approveWithdrawal('${t._id}')"><i class="fa-solid fa-check"></i> Approve</button>
+                     <button class="btn btn-danger btn-sm" onclick="openRejectModal('${t._id}')"><i class="fa-solid fa-xmark"></i> Reject</button>`;
+        } else if(t.status==='rejected'){
+          actions = `<span class="sub" style="text-align:left;">${esc(t.rejectionReason||'')}</span>`;
+        } else {
+          actions = '<span class="muted" style="font-size:12px;">Resolved</span>';
+        }
+        return [
+          `<span class="strong">${esc(t.user?.name||'—')}</span><span class="sub mono">@${esc(t.user?.username||'')}</span>`,
+          txTypeLabel(t), details, txAmountLabel(t),
+          `<span class="status-chip status-${t.status}">${t.status}</span>`, actions
+        ];
+      }))}
     </div>
   `;
 }
@@ -640,7 +648,123 @@ async function confirmReject(txId){
   }catch(e){ toast(e.message,'err'); }
 }
 
+/* ---------------- Applications inbox (website "Open an Account" requests) ---------------- */
+const APP_LABEL = { new:'New', in_review:'In review', approved:'Approved', declined:'Declined' };
+const APP_CLS = { new:'status-pending', in_review:'status-pending', approved:'status-approved', declined:'status-rejected' };
+let APPS = [];
+function appId(a){ return a.id || a._id; }
+function injectApplicationsUI(){
+  const usersItem = document.querySelector('.nav-item[data-view="users"]');
+  if(usersItem && !document.querySelector('.nav-item[data-view="applications"]')){
+    const item = document.createElement('div');
+    item.className = 'nav-item';
+    item.setAttribute('data-view','applications');
+    item.innerHTML = '<span class="ic"><i class="fa-solid fa-inbox"></i></span> Applications <span class="hidden" id="appBadge" style="margin-left:auto;background:var(--gold);color:var(--navy-dark);font-size:10.5px;font-weight:700;padding:1px 7px;border-radius:100px;"></span>';
+    item.addEventListener('click', ()=>nav('applications'));
+    usersItem.parentNode.insertBefore(item, usersItem.nextSibling);
+  }
+  if(!document.getElementById('view-applications')){
+    const box = document.createElement('div');
+    box.id = 'view-applications'; box.className = 'hidden';
+    document.getElementById('view-users').parentNode.appendChild(box);
+  }
+}
+async function refreshAppBadge(){
+  try{
+    const list = await api('/admin/applications');
+    const n = list.filter(a=>a.status==='new').length;
+    const b = document.getElementById('appBadge');
+    if(b){ b.textContent = n; b.classList.toggle('hidden', n===0); }
+  }catch(e){ /* inbox not available yet */ }
+}
+async function renderApplications(){
+  const box = document.getElementById('view-applications');
+  let list = [];
+  try{ list = await api('/admin/applications'); }catch(e){ box.innerHTML = '<div class="card"><div class="empty-state">Could not load applications. Make sure the server routes are installed.</div></div>'; return; }
+  APPS = list.slice().sort((a,b)=>((a.status==='new'?0:1)-(b.status==='new'?0:1)) || new Date(b.date||b.createdAt)-new Date(a.date||a.createdAt));
+  const b = document.getElementById('appBadge');
+  const n = list.filter(a=>a.status==='new').length;
+  if(b){ b.textContent = n; b.classList.toggle('hidden', n===0); }
+  if(!APPS.length){
+    box.innerHTML = '<div class="card"><div class="empty-state">No account applications yet. Requests from the website\'s "Open an Account" form will appear here.</div></div>';
+    return;
+  }
+  box.innerHTML = `
+    <div class="card">
+      <div class="card-title"><i class="fa-solid fa-inbox"></i> Account Applications ${n?`<span class="pill pill-amber">${n} new</span>`:''}</div>
+      ${dt([
+        {l:'Applicant',w:'minmax(0,1.8fr)',cls:'first'},{l:'Account',w:'minmax(0,1.1fr)'},{l:'Deposit',w:'minmax(0,.9fr)',cls:'num'},
+        {l:'Status',w:'90px'},{l:'Received',w:'minmax(0,1.3fr)'},{l:'',w:'80px',cls:'act'}
+      ], APPS.map(a=>{
+        const st = a.status||'new';
+        return [
+          `<span class="strong">${esc(a.fullName)}</span><span class="sub mono">${esc(a.email)}</span>`,
+          esc(a.acctType), (a.deposit!==''&&a.deposit!=null) ? fmtUSD(Number(a.deposit)||0) : '—',
+          `<span class="status-chip ${APP_CLS[st]||''}">${esc(APP_LABEL[st]||st)}</span>`,
+          `<span class="muted">${fmtDate(a.date||a.createdAt)}</span>`,
+          `<button class="btn btn-primary btn-sm" onclick="openApplication('${esc(appId(a))}')">View</button>`
+        ];
+      }))}
+    </div>`;
+}
+function openApplication(id){
+  const a = APPS.find(x=>String(appId(x))===String(id));
+  if(!a) return;
+  const row = (l,v)=>`<div><dt>${l}</dt><dd>${esc(v)||'—'}</dd></div>`;
+  openModal(`
+    <h3>${esc(a.fullName)}</h3>
+    <p class="muted" style="font-size:12.5px;">Received ${fmtDate(a.date||a.createdAt)}</p>
+    <dl class="detail-grid" style="margin:14px 0;">
+      ${row('Account type',a.acctType)}${row('Currencies',a.currencies)}${row('Date of birth',a.dob)}${row('Nationality',a.nationality)}
+      ${row('Residence',[a.address,a.city,a.postcode,a.residence].filter(Boolean).join(', '))}
+      ${row('Email',a.email)}${row('Phone',a.phone)}
+      ${row('Identification',a.idType?`${a.idType} · ${a.idNumber} (${a.idCountry})`:'')}
+      ${row('Occupation',a.occupation+(a.employer?' · '+a.employer:''))}${row('Source of funds',a.sourceFunds)}
+      ${row('Expected deposit',a.deposit?fmtUSD(Number(a.deposit)||0):'')}${a.bizReg?row('Business reg. no.',a.bizReg):''}
+    </dl>
+    <div class="field"><label>Status</label><select id="appStatus">${Object.keys(APP_LABEL).map(k=>`<option value="${k}" ${k===(a.status||'new')?'selected':''}>${APP_LABEL[k]}</option>`).join('')}</select></div>
+    <div class="row gap-8">
+      <button class="btn btn-primary btn-sm" onclick="saveAppStatus('${esc(appId(a))}')">Save status</button>
+      <button class="btn btn-outline btn-sm" onclick="createFromApplication('${esc(appId(a))}')">Create client account</button>
+      <button class="btn btn-outline btn-sm" onclick="closeModal()">Close</button>
+    </div>`, true);
+}
+async function saveAppStatus(id){
+  try{
+    await api('/admin/applications/'+id+'/status', { method:'POST', body:{ status:document.getElementById('appStatus').value } });
+    toast('Application updated','ok'); closeModal(); await renderApplications();
+  }catch(e){ toast(e.message,'err'); }
+}
+function pickOption(sel, text){
+  if(!sel || !text) return;
+  const t = String(text).toLowerCase(), first = t.split(/[\s(&]+/)[0];
+  let found = [...sel.options].find(o=>o.value && o.value.toLowerCase()===t);
+  if(!found && first.length>2) found = [...sel.options].find(o=>o.value && o.value.toLowerCase().includes(first));
+  if(found){ sel.value = found.value; sel.dispatchEvent(new Event('change')); }
+}
+async function createFromApplication(id){
+  const a = APPS.find(x=>String(appId(x))===String(id));
+  if(!a) return;
+  closeModal();
+  await nav('createuser');
+  const set = (i,v)=>{ const el=document.getElementById(i); if(el && v!=null) el.value=v; };
+  const sel = (i,v)=>pickOption(document.getElementById(i), v);
+  sel('cf_accountType',a.acctType); set('cf_legalName',a.fullName); set('cf_dateOfBirth',a.dob);
+  sel('cf_nationality',a.nationality); sel('cf_residenceCountry',a.residence);
+  set('cf_address',a.address); set('cf_city',a.city); set('cf_postcode',a.postcode);
+  set('cf_email',a.email); set('cf_phoneNumber',a.phone);
+  sel('cf_idType',a.idType); set('cf_idNumber',a.idNumber); sel('cf_idCountry',a.idCountry);
+  set('cf_occupation',a.occupation); set('cf_employer',a.employer); sel('cf_sourceOfFunds',a.sourceFunds);
+  set('cf_expectedDeposit',a.deposit); set('cf_businessRegNumber',a.bizReg);
+  const wanted = String(a.currencies||'').toUpperCase().split(/[^A-Z]+/).filter(Boolean);
+  document.querySelectorAll('input[name="cf_currency"]').forEach(c=>{ c.checked = wanted.includes(c.value.toUpperCase()); });
+  toast('Form pre-filled from the application — review, tick consent and submit','ok');
+  window.scrollTo(0,0);
+}
+setInterval(refreshAppBadge, 30000);
+
 (async function init(){
+  injectApplicationsUI();
   REF = await api('/admin/reference');
   await nav('overview');
 })();

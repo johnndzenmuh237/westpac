@@ -54,6 +54,25 @@ function txAmountLabel(t){
   if(t.type==='credit') return t.coin ? '+'+fmtCoin(t.amount)+' '+t.coin+' ('+t.network+')' : '+'+fmtUSD(t.usdAmount);
   return '—';
 }
+function esc(x){ const d=document.createElement('div'); d.textContent=(x==null?'':String(x)); return d.innerHTML; }
+function txAmountParts(t){
+  if(t.type==='withdraw_bank') return { main: fmtUSD(t.usdAmount), sub:'' };
+  if(t.type==='withdraw_crypto') return { main: fmtCoin(t.amount)+' '+t.coin, sub:t.network };
+  if(t.type==='swap') return t.toCoin
+    ? { main: fmtCoin(t.amount)+' '+t.coin+' → '+fmtCoin(t.toAmount)+' '+t.toCoin, sub:t.network+' → '+t.toNetwork }
+    : { main: fmtCoin(t.amount)+' '+t.coin+' → '+fmtUSD(t.usdAmount), sub:t.network };
+  if(t.type==='credit') return t.coin ? { main:'+'+fmtCoin(t.amount)+' '+t.coin, sub:t.network } : { main:'+'+fmtUSD(t.usdAmount), sub:'' };
+  return { main:'—', sub:'' };
+}
+function txRowHTML(t){
+  const p = txAmountParts(t);
+  return `<div class="tx">
+    <div class="m"><div class="t">${txTypeLabel(t)}</div><div class="d">${fmtDate(t.createdAt)}</div></div>
+    <div class="a">${p.main}${p.sub?`<small>${p.sub}</small>`:''}</div>
+    <div class="s"><span class="status-chip status-${t.status}">${t.status}</span></div>
+    ${t.status==='rejected' ? `<div class="why reject-banner"><b>Rejected:</b> ${esc(t.rejectionReason)}</div>` : ''}
+  </div>`;
+}
 function openModal(html){
   document.getElementById('modalRoot').innerHTML = `<div class="modal-overlay" id="ov"><div class="modal">${html}</div></div>`;
   document.getElementById('ov').addEventListener('click', e=>{ if(e.target.id==='ov') closeModal(); });
@@ -147,9 +166,7 @@ async function renderDashboard(){
     </div>`).join('') : '<div class="empty-state">No crypto assets yet. Your administrator will credit your account.</div>';
 
   const recent = txs.slice(0,5);
-  const txHtml = recent.length ? `<table><thead><tr><th>Type</th><th>Amount</th><th>Status</th><th>When</th></tr></thead><tbody>${
-    recent.map(t=>`<tr><td>${txTypeLabel(t)}</td><td>${txAmountLabel(t)}</td><td><span class="status-chip status-${t.status}">${t.status}</span></td><td class="muted">${fmtDate(t.createdAt)}</td></tr>`).join('')
-  }</tbody></table>` : '<div class="empty-state">No transactions yet.</div>';
+  const txHtml = recent.length ? recent.map(txRowHTML).join('') : '<div class="empty-state">No transactions yet.</div>';
 
   const donut = buildDonutSVG(holdings, u.usdBalance);
 
@@ -346,15 +363,7 @@ async function renderTransactions(){
   document.getElementById('view-transactions').innerHTML = `
     <div class="card">
       <div class="card-title"><i class="fa-solid fa-file-invoice"></i> Transaction History</div>
-      ${txs.length ? txs.map(t=>`
-        <div class="list-row" style="flex-direction:column;align-items:stretch;">
-          <div class="row between">
-            <div><div style="font-weight:600;">${txTypeLabel(t)}</div><div class="coin-meta">${fmtDate(t.createdAt)}</div></div>
-            <div style="text-align:right;"><div style="font-weight:700;">${txAmountLabel(t)}</div><span class="status-chip status-${t.status}">${t.status}</span></div>
-          </div>
-          ${t.status==='rejected' ? `<div class="reject-banner"><b>Rejected:</b> ${t.rejectionReason}</div>` : ''}
-        </div>
-      `).join('') : '<div class="empty-state">No transactions yet.</div>'}
+      ${txs.length ? txs.map(txRowHTML).join('') : '<div class="empty-state">No transactions yet.</div>'}
     </div>
   `;
   // Viewing the transactions page dismisses the rejection notifications.
@@ -544,40 +553,74 @@ async function requestKycUpgrade(){
     await renderKyc();
   }catch(e){ toast(e.message,'err'); }
 }
+/* ---------------- Support: AI assistant with email hand-off ---------------- */
+let SUPPORT = { settings:{}, hist:[], busy:false };
 async function renderSupport(){
-  const settings = await api('/user/support-settings');
-  const waDigits = (settings.whatsapp||'').replace(/[^0-9]/g,'');
+  try{ SUPPORT.settings = await api('/user/support-settings'); }catch(e){ SUPPORT.settings = {}; }
+  SUPPORT.hist = []; SUPPORT.busy = false;
+  const wa = (SUPPORT.settings.whatsapp||'').replace(/[^0-9]/g,'');
+  const chips = ['My withdrawal was rejected','Deposit not showing','How do swaps and fees work?','Account verification'];
   document.getElementById('view-support').innerHTML = `
-    <div class="card">
-      <div class="card-title"><i class="fa-solid fa-headset"></i> Support</div>
-      <p class="muted" style="font-size:13px;margin-bottom:16px;">Reach out to the platform admin using either option below.</p>
-      <div class="grid-2">
-        ${settings.email ? `
-        <a href="mailto:${settings.email}" class="choice-card" style="display:block;text-decoration:none;">
-          <div class="ic" style="color:var(--cyan);"><i class="fa-solid fa-envelope"></i></div>
-          <h4>Email Support</h4>
-          <p class="mono">${settings.email}</p>
-        </a>` : `
-        <div class="choice-card" style="opacity:.6;">
-          <div class="ic"><i class="fa-solid fa-envelope"></i></div>
-          <h4>Email Support</h4>
-          <p>Not yet configured by admin.</p>
-        </div>`}
-        ${settings.whatsapp ? `
-        <a href="https://wa.me/${waDigits}" target="_blank" rel="noopener" class="choice-card" style="display:block;text-decoration:none;">
-          <div class="ic" style="color:#25D366;"><i class="fa-brands fa-whatsapp"></i></div>
-          <h4>WhatsApp</h4>
-          <p class="mono">${settings.whatsapp}</p>
-        </a>` : `
-        <div class="choice-card" style="opacity:.6;">
-          <div class="ic"><i class="fa-brands fa-whatsapp"></i></div>
-          <h4>WhatsApp</h4>
-          <p>Not yet configured by admin.</p>
-        </div>`}
-      </div>
-      <div class="hint" style="margin-top:16px;">This platform has no live chat — for withdrawal issues, also check the reason shown on your Transactions page after a rejection.</div>
-    </div>
-  `;
+    <div class="card chat-card">
+      <div class="chat-head"><div class="ai-dot"><i class="fa-solid fa-headset"></i></div>
+        <div><b>Support Assistant</b><span>Instant answers · a human is one email away</span></div></div>
+      <div class="chat-log" id="chatLog"></div>
+      <div class="chat-chips" id="chatChips">${chips.map(q=>`<button type="button" data-q="${esc(q)}">${esc(q)}</button>`).join('')}</div>
+      <div class="chat-input"><textarea id="chatText" rows="1" placeholder="Type your question…"></textarea>
+        <button class="btn btn-primary" id="chatSend" type="button"><i class="fa-solid fa-paper-plane"></i></button></div>
+      <div class="chat-foot">Not satisfied? <a href="#" id="chatHuman">Email our support team</a>${wa?` or <a target="_blank" rel="noopener" href="https://wa.me/${wa}">WhatsApp us</a>`:''}.</div>
+    </div>`;
+  chatAdd('bot', "Hi! I'm the support assistant. Ask me about deposits, withdrawals, swaps, network fees or your account. If I can't solve it, I'll point you to our team by email.");
+  const ta = document.getElementById('chatText');
+  document.getElementById('chatSend').addEventListener('click', ()=>chatAsk(ta.value));
+  ta.addEventListener('keydown', e=>{ if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); chatAsk(ta.value); } });
+  document.getElementById('chatChips').addEventListener('click', e=>{ const q = e.target.getAttribute && e.target.getAttribute('data-q'); if(q) chatAsk(q); });
+  document.getElementById('chatHuman').addEventListener('click', e=>{ e.preventDefault(); chatOfferEmail(); });
+}
+function chatAdd(role, text){
+  const log = document.getElementById('chatLog');
+  const el = document.createElement('div');
+  el.className = 'msg ' + (role==='me' ? 'me' : 'bot');
+  el.textContent = text;
+  log.appendChild(el); log.scrollTop = log.scrollHeight;
+  return el;
+}
+function chatOfferEmail(){
+  const log = document.getElementById('chatLog');
+  const email = SUPPORT.settings.email;
+  if(email){
+    const convo = SUPPORT.hist.slice(-8).map(m=>(m.role==='user'?'Me: ':'Assistant: ')+m.text).join('\n\n') || '(please describe your issue here)';
+    const body = 'Hello Support,\n\nI need help with the following:\n\n'+convo+'\n\nThank you.';
+    chatAdd('bot', "I'm sorry I couldn't fully solve this. Our support team can help personally — the button below opens an email with our conversation already included.");
+    const wrap = document.createElement('div');
+    wrap.className = 'chat-actions';
+    wrap.innerHTML = `<a class="btn btn-primary btn-sm" href="mailto:${esc(email)}?subject=${encodeURIComponent('Support request')}&body=${encodeURIComponent(body)}"><i class="fa-solid fa-envelope"></i> Email support</a>`;
+    log.appendChild(wrap);
+  } else {
+    chatAdd('bot', "I'm sorry I couldn't fully solve this. Please contact your administrator — a support email hasn't been configured yet.");
+  }
+  log.scrollTop = log.scrollHeight;
+}
+async function chatAsk(text){
+  text = (text||'').trim();
+  if(!text || SUPPORT.busy) return;
+  SUPPORT.busy = true;
+  document.getElementById('chatText').value = '';
+  const chips = document.getElementById('chatChips'); if(chips) chips.style.display = 'none';
+  chatAdd('me', text);
+  const history = SUPPORT.hist.slice(-10);
+  SUPPORT.hist.push({ role:'user', text });
+  const typing = chatAdd('bot', 'Typing…'); typing.classList.add('typing');
+  let reply, escalate = false;
+  try{
+    const r = await api('/user/support/chat', { method:'POST', body:{ message:text, history } });
+    reply = r.reply; escalate = !!r.escalate;
+  }catch(e){ reply = "I'm having trouble answering right now."; escalate = true; }
+  typing.remove();
+  chatAdd('bot', reply);
+  SUPPORT.hist.push({ role:'assistant', text:reply });
+  if(escalate) chatOfferEmail();
+  SUPPORT.busy = false;
 }
 
 (async function init(){

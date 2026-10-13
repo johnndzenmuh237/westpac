@@ -89,16 +89,11 @@ button{font-family:inherit;}
 .coin-meta{font-size:11.5px;color:var(--text-faint);}
 .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
 .grid-3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;}
-@media (max-width:760px){.grid-2,.grid-3{grid-template-columns:1fr 1fr;}}
 .market-tile{display:flex;align-items:center;justify-content:space-between;background:var(--bg-soft);border:1px solid var(--border);border-radius:11px;padding:14px;}
 .qa-tile{background:var(--bg-soft);border:1px solid var(--border);border-radius:11px;padding:20px 10px;text-align:center;cursor:pointer;transition:border-color .15s;}
 .qa-tile:hover{border-color:var(--gold);}
 .qa-tile .ic{font-size:20px;margin-bottom:8px;}
 .qa-tile .lbl{font-size:12.5px;font-weight:600;color:var(--text-dim);}
-table{width:100%;border-collapse:collapse;font-size:13.5px;}
-th{text-align:left;color:var(--text-faint);font-weight:600;font-size:11.5px;letter-spacing:.4px;padding:0 10px 10px 10px;border-bottom:1px solid var(--border);}
-td{padding:13px 10px;border-bottom:1px solid var(--border);vertical-align:top;}
-tr:last-child td{border-bottom:none;}
 .mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12.5px;color:var(--text-dim);}
 .reject-banner{background:#fdf2f4;border:1px solid #f2c9d0;color:#b4233a;border-radius:9px;padding:10px 13px;font-size:12.5px;margin-top:6px;line-height:1.5;}
 .reject-banner b{color:#8f1d2f;}
@@ -223,3 +218,144 @@ tr:last-child td{border-bottom:none;}
 .detail-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px 18px;font-size:13.5px;}
 .detail-grid dt{color:var(--text-faint);font-size:11.5px;text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px;}
 .detail-grid dd{margin:0 0 6px;color:var(--text);word-break:break-word;}
+
+/* ==========================================================================
+   LAYOUT FIX — fixed page, horizontal text only, no sideways scrolling.
+   Tables were replaced by .dt data lists (see user.js / admin.js).
+   ========================================================================== */
+html{-webkit-text-size-adjust:100%;}
+html,body{max-width:100%;overflow-x:hidden;}
+html,body{overflow-x:clip;}
+body{overflow-wrap:break-word;}
+.app{width:100%;max-width:100%;overflow-x:clip;}
+.main{min-width:0;max-width:100%;}
+.main>div{min-width:0;}
+*,*::before,*::after{writing-mode:horizontal-tb;}
+.card,.modal,.topbar,.market-tile,.holding-row,.list-row,.choice-card,.qa-tile,.creds-box{min-width:0;max-width:100%;}
+.card{overflow:hidden;}
+img,svg{max-width:100%;}
+/* text only ever wraps between words; machine strings may wrap anywhere */
+p,h1,h2,h3,h4,dd,dt,label,.hint,.coin-meta,.muted{word-break:normal;overflow-wrap:break-word;hyphens:none;}
+.mono{overflow-wrap:anywhere;word-break:normal;}
+.btn,.pill,.status-chip,.nav-item,.role-tab,.chip{white-space:nowrap;}
+.status-chip{display:inline-block;}
+.row{flex-wrap:wrap;}
+.topbar{gap:12px;}
+.topbar h2{min-width:0;font-size:clamp(15px,4.4vw,19px);overflow-wrap:break-word;}
+.holding-row,.list-row{gap:12px;flex-wrap:wrap;}
+.holding-row>*,.list-row>*,.row>*{min-width:0;}
+.creds-line{gap:12px;flex-wrap:wrap;}
+.creds-line .val{overflow-wrap:anywhere;}
+.hero-balance .amt{font-size:clamp(28px,8vw,40px);overflow-wrap:anywhere;}
+.grid-2>*,.grid-3>*,.two-col>*,.three-col>*,.detail-grid>*{min-width:0;}
+.market-tile{gap:10px;}
+.market-tile>div{min-width:0;}
+.toast-wrap{max-width:calc(100vw - 36px);}
+.toast{max-width:100%;min-width:0;}
+.modal{max-width:min(460px,100%);overflow-x:hidden;}
+.modal.wide{max-width:min(680px,100%);}
+.modal-overlay{overflow-x:hidden;}
+.modal input,.modal select,.modal textarea{max-width:100%;min-width:0;}
+.donut-wrap{gap:20px;}
+@media (max-width:560px){
+  .grid-2,.detail-grid,.two-col,.three-col{grid-template-columns:1fr;}
+  .grid-3{grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;}
+  .qa-tile{padding:16px 6px;}
+  .qa-tile .lbl{font-size:12px;}
+  .card{padding:16px;}
+  .main{padding:12px 12px 48px;}
+  .topbar{padding:12px 14px;}
+  .modal{padding:20px;}
+  .hero-balance .amt{font-size:clamp(26px,9vw,34px);}
+}
+
+/* ---------- .dt : clean data list (replaces tables) ----------
+   Wide container  -> header row + aligned columns.
+   Narrow container -> every record becomes a tidy card. */
+.dt{container-type:inline-size;width:100%;}
+.dt-head,.dt-row{display:grid;grid-template-columns:var(--cols,repeat(4,1fr));column-gap:16px;align-items:start;}
+.dt-head{padding:0 12px 10px;border-bottom:1px solid var(--border);font-size:11.5px;font-weight:600;letter-spacing:.4px;color:var(--text-faint);text-transform:uppercase;}
+.dt-row{padding:14px 12px;border-bottom:1px solid var(--border);font-size:13.5px;}
+.dt-row:last-child{border-bottom:none;}
+.dt-row:hover{background:#fafbfd;}
+.dt-c{min-width:0;overflow-wrap:break-word;}
+.dt-c .sub{display:block;font-size:12px;color:var(--text-faint);margin-top:2px;}
+.dt-c .strong{font-weight:600;color:var(--ink);}
+.dt-c.num{text-align:right;}
+.dt-c.act{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;}
+.dt-head .num{text-align:right;}
+@container (max-width:700px){
+  .dt-head{display:none;}
+  .dt-row{display:block;border:1px solid var(--border);border-radius:12px;padding:6px 14px;margin-bottom:10px;background:var(--panel);}
+  .dt-row:last-child{margin-bottom:0;border-bottom:1px solid var(--border);}
+  .dt-row:hover{background:var(--panel);}
+  .dt-c{display:flex;justify-content:space-between;align-items:flex-start;gap:14px;padding:9px 0;border-bottom:1px dashed var(--border);text-align:right;}
+  .dt-c:last-child{border-bottom:none;}
+  .dt-c::before{content:attr(data-label);flex:0 0 36%;max-width:36%;text-align:left;font-size:11.5px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:var(--text-faint);padding-top:2px;}
+  .dt-c>*{min-width:0;}
+  .dt-c .v{flex:1;min-width:0;text-align:right;}
+  .dt-c.first{display:block;text-align:left;padding:10px 0;}
+  .dt-c.first::before{display:none;}
+  .dt-c.num{text-align:right;}
+  .dt-c.act{justify-content:flex-start;padding:12px 0 8px;border-bottom:none;}
+  .dt-c.act::before{display:none;}
+  .dt-c.act .btn{flex:1 1 auto;text-align:center;}
+}
+.dt .v{display:block;min-width:0;}
+
+/* ---------- transaction list (user) ---------- */
+.tx{display:grid;grid-template-columns:minmax(0,1.3fr) minmax(0,1.7fr) auto;column-gap:16px;align-items:center;padding:14px 4px;border-bottom:1px solid var(--border);}
+.tx:last-child{border-bottom:none;}
+.tx .t{font-weight:600;font-size:14px;color:var(--ink);}
+.tx .d{font-size:12px;color:var(--text-faint);margin-top:2px;}
+.tx .a{font-weight:700;font-size:14px;text-align:right;}
+.tx .a small{display:block;font-weight:500;font-size:11.5px;color:var(--text-faint);margin-top:2px;}
+.tx .s{text-align:right;min-width:78px;}
+.tx .why{grid-column:1/-1;margin-top:8px;}
+@media (max-width:640px){
+  .tx{grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr);row-gap:6px;}
+  .tx .a{grid-column:2;grid-row:1;}
+  .tx .s{grid-column:2;grid-row:2;min-width:0;}
+  .tx .m{grid-column:1;grid-row:1 / span 2;}
+}
+
+/* ---------- admin: manage / crediting modal ---------- */
+.holding-edit{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px 14px;align-items:center;padding:12px 0;border-bottom:1px solid var(--border);}
+.holding-edit:last-child{border-bottom:none;}
+.holding-edit .who{display:flex;align-items:center;gap:10px;min-width:0;}
+.holding-edit .who>div:last-child{min-width:0;}
+.holding-edit .set{display:flex;gap:8px;align-items:center;}
+.holding-edit .set input{width:120px;max-width:100%;background:#fff;border:1.5px solid var(--line);color:var(--text);padding:8px 10px;border-radius:8px;font-size:13.5px;font-family:inherit;}
+@media (max-width:520px){
+  .holding-edit{grid-template-columns:minmax(0,1fr);}
+  .holding-edit .set{width:100%;}
+  .holding-edit .set input{flex:1;width:auto;}
+}
+.inline-form{display:flex;gap:10px;align-items:center;flex-wrap:wrap;}
+.inline-form input{flex:1 1 140px;min-width:0;background:#fff;border:1.5px solid var(--line);color:var(--text);padding:10px 12px;border-radius:9px;font-size:14.5px;font-family:inherit;}
+.sub-card{padding:16px;margin-bottom:14px;background:var(--bg-soft);}
+
+/* ---------- support chat ---------- */
+.chat-card{max-width:760px;padding:0;display:flex;flex-direction:column;}
+.chat-head{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;}
+.chat-head .ai-dot{width:38px;height:38px;border-radius:50%;background:var(--navy);color:#fff;display:flex;align-items:center;justify-content:center;flex:none;}
+.chat-head b{display:block;font-size:14.5px;color:var(--navy);}
+.chat-head span{font-size:12px;color:var(--text-faint);}
+.chat-log{height:min(52vh,460px);overflow-y:auto;overflow-x:hidden;padding:18px 14px;display:flex;flex-direction:column;gap:10px;background:var(--bg-soft);}
+.msg{max-width:88%;padding:10px 14px;border-radius:14px;font-size:14px;line-height:1.55;overflow-wrap:break-word;white-space:pre-wrap;}
+.msg.bot{align-self:flex-start;background:#fff;border:1px solid var(--border);border-bottom-left-radius:4px;}
+.msg.me{align-self:flex-end;background:var(--navy);color:#fff;border-bottom-right-radius:4px;}
+.msg.typing{color:var(--text-faint);font-style:italic;}
+.chat-actions{display:flex;gap:8px;flex-wrap:wrap;align-self:flex-start;}
+.chat-chips{display:flex;gap:8px;flex-wrap:wrap;padding:12px 14px 0;}
+.chat-chips button{border:1.5px solid var(--border-solid);background:#fff;color:var(--navy);padding:6px 12px;border-radius:999px;font-size:12.5px;font-weight:600;cursor:pointer;font-family:inherit;}
+.chat-chips button:hover{border-color:var(--gold);}
+.chat-input{display:flex;gap:10px;padding:14px;border-top:1px solid var(--border);align-items:flex-end;}
+.chat-input textarea{flex:1;min-width:0;resize:none;border:1.5px solid var(--line);border-radius:12px;padding:10px 12px;font:inherit;font-size:15px;max-height:120px;outline:none;}
+.chat-input textarea:focus{border-color:var(--navy);}
+.chat-foot{padding:0 14px 14px;font-size:12px;color:var(--text-faint);}
+.chat-foot a{color:var(--navy);font-weight:600;text-decoration:underline;}
+
+/* admin overview stat cards: never 3 cramped columns */
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:14px;}
+.stats>.card>div:last-child{font-size:clamp(20px,5.5vw,26px) !important;overflow-wrap:anywhere;}
