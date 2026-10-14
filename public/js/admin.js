@@ -70,7 +70,10 @@ function toggleSidebar(open){
 
 async function nav(view, arg){
   currentView = view;
-  ['overview','createuser','users','edituser','deposits','support','withdrawals','applications'].forEach(v=>document.getElementById('view-'+v).classList.toggle('hidden', v!==view));
+ ['overview','createuser','users','edituser','deposits','support','withdrawals','applications','loans','kycreq'].forEach(v=>{
+  const el = document.getElementById('view-'+v);
+  if(el) el.classList.toggle('hidden', v!==view);
+});
   const highlight = view==='edituser' ? 'users' : view;
   document.querySelectorAll('.nav-item[data-view]').forEach(el=>el.classList.toggle('active', el.dataset.view===highlight));
   toggleSidebar(false);
@@ -81,8 +84,9 @@ async function nav(view, arg){
   if(view==='deposits') await renderDepositAddresses();
   if(view==='support') await renderSupportSettings();
   if(view==='withdrawals') await renderWithdrawals();
-  if(view==='applications') await renderApplications();
-  await refreshBadge();
+   if(view==='applications') await renderApplications();
+  if(view==='loans') await renderLoans();
+  if(view==='kycreq') await renderKycRequests();
   if(typeof refreshAppBadge==='function') refreshAppBadge();
 }
 setInterval(()=>{ if(currentView==='overview') renderOverview(); }, 30000);

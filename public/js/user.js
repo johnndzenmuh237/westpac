@@ -100,15 +100,21 @@ function copyText(text, btnEl){
 
 async function nav(view){
   currentView = view;
-  ['dashboard','wallet','account','transactions','deposit','withdraw','buy','kyc','support'].forEach(v=>document.getElementById('view-'+v).classList.toggle('hidden', v!==view));
+  ['dashboard','wallet','account','transactions','deposit','withdraw','buy','kyc','support','loans'].forEach(v=>{
+    const el = document.getElementById('view-'+v);
+    if(el) el.classList.toggle('hidden', v!==view);
+  });
   document.querySelectorAll('.nav-item[data-view]').forEach(el=>el.classList.toggle('active', el.dataset.view===view));
   toggleSidebar(false);
-  const fns = { dashboard:renderDashboard, wallet:renderWallet, account:renderAccount, transactions:renderTransactions,
-    deposit:renderDeposit, withdraw:renderWithdraw, buy:renderBuy, kyc:renderKyc, support:renderSupport };
+  // dashboard / kyc / support / loans go through window.* so the extra scripts
+  // (user-loans-kyc.js, user-support-ai.js) can replace them after this file loads
+  const fns = { dashboard:()=>window.renderDashboard(), wallet:renderWallet, account:renderAccount, transactions:renderTransactions,
+    deposit:renderDeposit, withdraw:renderWithdraw, buy:renderBuy, kyc:()=>window.renderKyc(), support:()=>window.renderSupport(),
+    loans:()=>window.renderLoans() };
   await fns[view]();
   await refreshNotifBadge();
 }
-setInterval(()=>{ if(currentView==='dashboard') renderDashboard(); }, 30000);
+setInterval(()=>{ if(currentView==='dashboard') window.renderDashboard(); }, 30000);
 
 async function refreshNotifBadge(){
   const txs = await api('/user/transactions');
@@ -207,7 +213,7 @@ async function renderDashboard(){
 async function dismissAllNotifications(){
   try{
     await api('/user/transactions/mark-all-seen', { method:'POST' });
-    await renderDashboard();
+    await window.renderDashboard();
     await refreshNotifBadge();
   }catch(e){ toast(e.message,'err'); }
 }
@@ -408,7 +414,7 @@ function refreshDepAddress(){
           <div class="mono" style="word-break:break-all;color:var(--cyan);flex:1;">${match.address}</div>
           <button class="btn btn-outline btn-sm" onclick="copyText('${match.address}', this)"><i class="fa-solid fa-copy"></i></button>
         </div>
-        <div class="hint" style="margin-top:10px;">No real network — this address is for testing. Notify your administrator after sending so they can credit your balance.</div>
+        <div class="hint" style="margin-top:10px;">Notify your administrator after sending so they can credit your balance.</div>
       </div>
     `;
   } else {
@@ -553,29 +559,29 @@ async function requestKycUpgrade(){
     await renderKyc();
   }catch(e){ toast(e.message,'err'); }
 }
-/* ---------------- Support: AI assistant with email hand-off ---------------- */
-let SUPPORT = { settings:{}, hist:[], busy:false };
+
+/* ---------------- Support: AI assistant with WhatsApp hand-off ---------------- */
+const SUPPORT_WHATSAPP = '+16028740409';   // change the number here if it ever changes
+let SUPPORT = { hist:[], busy:false };
 async function renderSupport(){
-  try{ SUPPORT.settings = await api('/user/support-settings'); }catch(e){ SUPPORT.settings = {}; }
   SUPPORT.hist = []; SUPPORT.busy = false;
-  const wa = (SUPPORT.settings.whatsapp||'').replace(/[^0-9]/g,'');
   const chips = ['My withdrawal was rejected','Deposit not showing','How do swaps and fees work?','Account verification'];
   document.getElementById('view-support').innerHTML = `
     <div class="card chat-card">
       <div class="chat-head"><div class="ai-dot"><i class="fa-solid fa-headset"></i></div>
-        <div><b>Support Assistant</b><span>Instant answers · a human is one email away</span></div></div>
+        <div><b>Support Assistant</b><span>Instant answers · a human is one WhatsApp message away</span></div></div>
       <div class="chat-log" id="chatLog"></div>
       <div class="chat-chips" id="chatChips">${chips.map(q=>`<button type="button" data-q="${esc(q)}">${esc(q)}</button>`).join('')}</div>
       <div class="chat-input"><textarea id="chatText" rows="1" placeholder="Type your question…"></textarea>
         <button class="btn btn-primary" id="chatSend" type="button"><i class="fa-solid fa-paper-plane"></i></button></div>
-      <div class="chat-foot">Not satisfied? <a href="#" id="chatHuman">Email our support team</a>${wa?` or <a target="_blank" rel="noopener" href="https://wa.me/${wa}">WhatsApp us</a>`:''}.</div>
+      <div class="chat-foot">Not satisfied? <a href="#" id="chatHuman"><i class="fa-brands fa-whatsapp"></i> Chat with our team on WhatsApp</a>.</div>
     </div>`;
-  chatAdd('bot', "Hi! I'm the support assistant. Ask me about deposits, withdrawals, swaps, network fees or your account. If I can't solve it, I'll point you to our team by email.");
+  chatAdd('bot', "Hi! I'm the support assistant. Ask me about deposits, withdrawals, swaps, network fees or your account. If I can't solve it, I'll connect you with our team on WhatsApp.");
   const ta = document.getElementById('chatText');
   document.getElementById('chatSend').addEventListener('click', ()=>chatAsk(ta.value));
   ta.addEventListener('keydown', e=>{ if(e.key==='Enter' && !e.shiftKey){ e.preventDefault(); chatAsk(ta.value); } });
   document.getElementById('chatChips').addEventListener('click', e=>{ const q = e.target.getAttribute && e.target.getAttribute('data-q'); if(q) chatAsk(q); });
-  document.getElementById('chatHuman').addEventListener('click', e=>{ e.preventDefault(); chatOfferEmail(); });
+  document.getElementById('chatHuman').addEventListener('click', e=>{ e.preventDefault(); chatOfferWhatsApp(true); });
 }
 function chatAdd(role, text){
   const log = document.getElementById('chatLog');
@@ -585,20 +591,18 @@ function chatAdd(role, text){
   log.appendChild(el); log.scrollTop = log.scrollHeight;
   return el;
 }
-function chatOfferEmail(){
+function chatOfferWhatsApp(manual){
   const log = document.getElementById('chatLog');
-  const email = SUPPORT.settings.email;
-  if(email){
-    const convo = SUPPORT.hist.slice(-8).map(m=>(m.role==='user'?'Me: ':'Assistant: ')+m.text).join('\n\n') || '(please describe your issue here)';
-    const body = 'Hello Support,\n\nI need help with the following:\n\n'+convo+'\n\nThank you.';
-    chatAdd('bot', "I'm sorry I couldn't fully solve this. Our support team can help personally — the button below opens an email with our conversation already included.");
-    const wrap = document.createElement('div');
-    wrap.className = 'chat-actions';
-    wrap.innerHTML = `<a class="btn btn-primary btn-sm" href="mailto:${esc(email)}?subject=${encodeURIComponent('Support request')}&body=${encodeURIComponent(body)}"><i class="fa-solid fa-envelope"></i> Email support</a>`;
-    log.appendChild(wrap);
-  } else {
-    chatAdd('bot', "I'm sorry I couldn't fully solve this. Please contact your administrator — a support email hasn't been configured yet.");
-  }
+  const convo = SUPPORT.hist.slice(-8).map(m=>(m.role==='user'?'Me: ':'Assistant: ')+m.text).join('\n\n') || '(please describe your issue here)';
+  const msg = 'Hello Support, I need help with the following:\n\n' + convo;
+  const link = 'https://wa.me/' + SUPPORT_WHATSAPP.replace(/[^0-9]/g,'') + '?text=' + encodeURIComponent(msg);
+  chatAdd('bot', manual
+    ? "Sure — tap the button below to chat with our team on WhatsApp."
+    : "I'm sorry I couldn't fully solve this. Our team can help you personally on WhatsApp. The button below opens a chat with our conversation already included.");
+  const wrap = document.createElement('div');
+  wrap.className = 'chat-actions';
+  wrap.innerHTML = `<a class="btn btn-primary btn-sm" target="_blank" rel="noopener" href="${link}"><i class="fa-brands fa-whatsapp"></i> Chat on WhatsApp (${esc(SUPPORT_WHATSAPP)})</a>`;
+  log.appendChild(wrap);
   log.scrollTop = log.scrollHeight;
 }
 async function chatAsk(text){
@@ -619,7 +623,7 @@ async function chatAsk(text){
   typing.remove();
   chatAdd('bot', reply);
   SUPPORT.hist.push({ role:'assistant', text:reply });
-  if(escalate) chatOfferEmail();
+  if(escalate) chatOfferWhatsApp(false);
   SUPPORT.busy = false;
 }
 
