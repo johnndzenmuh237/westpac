@@ -1,14 +1,58 @@
 /* server-routes.js  (project root, next to server.js)
-   Adds, using YOUR existing SQLite database and login middleware:
-     - POST /api/public/applications           website "Open an Account" form -> saved
-     - GET  /api/admin/applications            admin inbox
-     - POST /api/admin/applications/:id/status admin updates status
-     - POST /api/user/support/chat             support AI (falls back to a built-in FAQ)
-   Optional: set ANTHROPIC_API_KEY in Render's Environment tab for AI answers.
-   No new npm packages needed. */
+   - POST /api/public/applications           website "Open an Account" form -> saved
+   - GET  /api/admin/applications            admin inbox
+   - POST /api/admin/applications/:id/status admin updates status
+   - POST /api/user/support/chat             support AI (falls back to a built-in FAQ)
+   - GET  /api/public/tawk, GET/PUT /api/admin/tawk   Tawk.to live chat address
+   - Live crypto prices applied to any API response that contains a "coins" object
+   Optional: set ANTHROPIC_API_KEY in your host's Environment settings for AI answers. */
 const crypto = require('crypto');
 const { db } = require('./config/db');
 const { requireUser, requireAdmin } = require('./middleware/auth');
+
+const SITE_NAME = 'Westpac Global'; // change here if you rename the platform
+
+/* ---------- Live crypto prices (CoinGecko, free, no API key) ---------- */
+const GECKO_IDS = {
+  BTC: 'bitcoin', ETH: 'ethereum', USDT: 'tether', USDC: 'usd-coin',
+  BNB: 'binancecoin', TRX: 'tron', SOL: 'solana', MATIC: 'matic-network'
+};
+const livePrices = {};
+let livePricesAt = 0;
+
+async function refreshLivePrices(){
+  try{
+    const url = 'https://api.coingecko.com/api/v3/simple/price?ids=' + Object.values(GECKO_IDS).join(',')
+      + '&vs_currencies=usd&include_24hr_change=true';
+    const r = await fetch(url, { headers:{ accept:'application/json' } });
+    if(!r.ok) throw new Error('HTTP ' + r.status);
+    const data = await r.json();
+    for(const [coin, id] of Object.entries(GECKO_IDS)){
+      if(data[id] && typeof data[id].usd === 'number'){
+        livePrices[coin] = { price: data[id].usd, change24h: data[id].usd_24h_change || 0 };
+      }
+    }
+    livePricesAt = Date.now();
+  }catch(e){
+    console.error('Live price refresh failed, keeping last known prices:', e.message);
+  }
+}
+refreshLivePrices();
+setInterval(refreshLivePrices, 60000);
+
+function applyLivePrices(coins){
+  const fresh = Date.now() - livePricesAt < 10 * 60 * 1000;
+  for(const coin of Object.keys(coins)){
+    const c = livePrices[coin];
+    if(c && fresh){
+      coins[coin].price = c.price;
+      coins[coin].change24h = c.change24h;
+      coins[coin].live = true;
+    } else if(coins[coin]) {
+      coins[coin].live = false;
+    }
+  }
+}
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS applications (
@@ -41,7 +85,7 @@ const FAQ = [
   [/deposit|credit|not showing|didn.?t arrive/i, "Deposits are credited manually by the administrator after you send funds to the address shown on the Deposit page. Once you've sent them, notify the support team so they can credit your balance."],
   [/swap|fee|gas|network/i, "Swaps and crypto withdrawals need a small amount of the network's gas coin (for example ETH on Ethereum) in your wallet to pay the network fee. The fee is shown before you confirm."],
   [/verif|kyc|identity|upgrade/i, "Open the KYC Verification page and press Upgrade Now. Once your request is reviewed, your withdrawal limits increase."],
-  [/password|login|sign in|locked/i, "For security, passwords can only be reset by the administrator. Please email the support team and they will issue a new one."]
+  [/password|login|sign in|locked/i, "For security, passwords can only be reset by the administrator. Please contact our team on WhatsApp and they will issue a new one."]
 ];
 function faqAnswer(msg){
   for(const [re, ans] of FAQ) if(re.test(msg)) return { reply: ans, escalate: false };
@@ -53,10 +97,10 @@ async function aiAnswer(message, history){
   const key = process.env.ANTHROPIC_API_KEY;
   if(!key) return faqAnswer(message);
   const system = [
-    "You are the customer support assistant inside the West Pac Global client dashboard (deposits, withdrawals, swaps, network gas fees, account details, KYC verification).",
+    "You are the customer support assistant inside the " + SITE_NAME + " client dashboard (deposits, withdrawals, swaps, network gas fees, account details, KYC verification, loans).",
     "Facts: deposits are credited manually by an administrator after the user sends funds to the deposit address shown on the Deposit page; withdrawals are reviewed by an admin and rejections show a reason on the Transactions page, with funds returned; swaps and crypto withdrawals need the network's gas coin balance; passwords are reset only by an administrator.",
     "Be brief, friendly and accurate. Never ask for passwords, private keys or full ID numbers. Never invent balances or statuses and do not promise outcomes.",
-    "If you cannot fully resolve the issue, the question is about a specific account or transaction you cannot see, or the user seems unhappy, end your reply with the exact token [[ESCALATE]]."
+    "If you cannot fully resolve the issue, the question is about a specific account or transaction you cannot see, or the user seems unhappy, end your reply with the exact token [[ESCALATE]]. The platform will then show the user a WhatsApp button to reach the human team. Never tell users to email support."
   ].join(' ');
   const msgs = [];
   for(const h of (history||[]).slice(-10)){
@@ -82,7 +126,43 @@ async function aiAnswer(message, history){
   return { reply: text || "Sorry, I couldn't come up with an answer.", escalate };
 }
 
+/* ---------- Tawk.to live chat setting (editable from the admin panel) ---------- */
+db.exec(`CREATE TABLE IF NOT EXISTS site_settings (key TEXT PRIMARY KEY, value TEXT)`);
+function getSetting(k){ const r = db.prepare('SELECT value FROM site_settings WHERE key=?').get(k); return r ? r.value : ''; }
+function setSetting(k, v){ db.prepare('INSERT INTO site_settings (key,value) VALUES (?,?) ON CONFLICT(key) DO UPDATE SET value=excluded.value').run(k, v); }
+// Accepts the full widget snippet, the embed URL, the direct chat link, or "PROPERTYID/WIDGETID"
+function normalizeTawk(input){
+  const s = String(input || '').trim();
+  if(!s) return '';
+  const m = s.match(/(?:embed\.tawk\.to|tawk\.to\/chat)\/([a-z0-9]+)\/([a-z0-9]+)/i) || s.match(/^([a-z0-9]+)\/([a-z0-9]+)$/i);
+  return m ? `https://embed.tawk.to/${m[1]}/${m[2]}` : null;
+}
+
 module.exports = function(app){
+  // Make every API response that contains a "coins" price list use live prices
+  app.use('/api', (req, res, next) => {
+    const orig = res.json.bind(res);
+    res.json = (body) => {
+      try{
+        if(body && body.coins && typeof body.coins === 'object') applyLivePrices(body.coins);
+      }catch(e){ /* never break a response over prices */ }
+      return orig(body);
+    };
+    next();
+  });
+
+  // PUBLIC: the website loads this to know which Tawk widget to show
+  app.get('/api/public/tawk', (req, res) => res.json({ url: getSetting('tawkUrl') }));
+
+  // ADMIN: read / save the Tawk address
+  app.get('/api/admin/tawk', requireAdmin, (req, res) => res.json({ url: getSetting('tawkUrl') }));
+  app.put('/api/admin/tawk', requireAdmin, (req, res) => {
+    const url = normalizeTawk(req.body && req.body.url);
+    if(url === null) return res.status(400).json({ error:'That does not look like a Tawk.to widget address. Use the link that looks like https://embed.tawk.to/PROPERTY_ID/WIDGET_ID' });
+    setSetting('tawkUrl', url);
+    res.json({ ok:true, url });
+  });
+
   // PUBLIC: website "Open an Account" form (no login needed)
   app.post('/api/public/applications', (req, res) => {
     if(limited(req.ip)) return res.status(429).json({ error:'Too many submissions. Please try again later.' });
@@ -113,7 +193,7 @@ module.exports = function(app){
   app.post('/api/user/support/chat', requireUser, async (req, res) => {
     const message = String((req.body && req.body.message) || '').trim().slice(0, 1000);
     if(!message) return res.status(400).json({ error:'Empty message' });
-    if(UNHAPPY.test(message)) return res.json({ reply:"Understood - let me connect you with our team.", escalate:true });
+    if(UNHAPPY.test(message)) return res.json({ reply:"Understood — let me connect you with our team.", escalate:true });
     try{ res.json(await aiAnswer(message, req.body.history)); }
     catch(e){ res.json(faqAnswer(message)); }
   });
