@@ -228,7 +228,6 @@ footer a:hover,footer button.flink:hover{color:#fff}
 .demo-note{background:#fdf6e8;border:1px solid var(--gold-light);color:#6b5520;font-size:12.8px;padding:10px 12px;border-radius:9px;margin-bottom:16px}
 
 /* ---------- Loan programme page additions ---------- */
-.loan-notice{background:#fff8e8;border:1px solid #ead7a7;border-radius:12px;padding:16px 18px;color:#624d1b;font-size:13.5px;margin:0 0 24px}
 .loan-card{display:flex;flex-direction:column;gap:12px}
 .loan-card .loan-amount{font-family:'Source Serif 4',serif;font-size:25px;color:var(--navy);margin:2px 0}
 .loan-card ul{padding-left:19px;margin:0;color:var(--muted);font-size:14px;line-height:1.7}
@@ -238,6 +237,16 @@ footer a:hover,footer button.flink:hover{color:#fff}
 .loan-step .step-number{flex:none;width:34px;height:34px;border-radius:50%;background:var(--navy);color:#fff;display:flex;align-items:center;justify-content:center;font-weight:700}
 .loan-steps .card h3{margin-bottom:6px}
 .loan-steps .card p{font-size:14px}
+
+
+.loan-access{display:flex;align-items:center;justify-content:space-between;gap:20px;flex-wrap:wrap;background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:22px 24px;margin:0 0 30px;box-shadow:0 8px 24px rgba(7,26,51,.05)}
+.loan-access h3{font-size:19px;color:var(--navy);margin:0 0 5px}
+.loan-access p{font-size:14px;margin:0}
+.loan-access-actions{display:flex;gap:10px;flex-wrap:wrap}
+.loan-access-actions a,.loan-access-actions button{white-space:nowrap}
+.loan-icon{width:22px;height:22px;display:block;stroke:var(--navy);stroke-width:1.7;fill:none;stroke-linecap:round;stroke-linejoin:round}
+.demo-footer-note{font-size:12px;color:#9fb0c3;max-width:60ch;margin-top:12px}
+@media(max-width:560px){.loan-access{align-items:flex-start}.loan-access-actions{width:100%}.loan-access-actions>*{flex:1;text-align:center}}
 
 </style>
 </head>
@@ -348,9 +357,9 @@ footer a:hover,footer button.flink:hover{color:#fff}
         <p>Review the available loan categories, eligibility considerations, repayment information, and application steps before signing in to apply.</p>
       </div>
       <div class="grid3">
-        <div class="card"><div class="icon-badge">↗</div><h3>Personal Loan</h3><p>For eligible personal expenses, planned purchases, or unexpected costs. Amount, rate, and term depend on individual assessment.</p></div>
-        <div class="card"><div class="icon-badge">▦</div><h3>Business Loan</h3><p>Financing consideration for eligible business needs such as working capital, equipment, or expansion.</p></div>
-        <div class="card"><div class="icon-badge">⌂</div><h3>Emergency Loan</h3><p>A short-term lending option for qualifying urgent expenses, subject to affordability checks and final approval.</p></div>
+        <div class="card"><div class="icon-badge"><svg class="loan-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.5"/><path d="M5 20c.6-3.3 3.1-5 7-5s6.4 1.7 7 5"/><path d="M18 4v4M16 6h4"/></svg></div><h3>Personal Loan</h3><p>For eligible personal expenses, planned purchases, or unexpected costs. Amount, rate, and term depend on individual assessment.</p></div>
+        <div class="card"><div class="icon-badge"><svg class="loan-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V4h8v3M3 12h18M10 12v2h4v-2"/></svg></div><h3>Business Loan</h3><p>Financing consideration for eligible business needs such as working capital, equipment, or expansion.</p></div>
+        <div class="card"><div class="icon-badge"><svg class="loan-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 21 19H3L12 3Z"/><path d="M12 9v4M12 16h.01"/></svg></div><h3>Emergency Loan</h3><p>A short-term lending option for qualifying urgent expenses, subject to affordability checks and final approval.</p></div>
       </div>
       <div style="text-align:center;margin-top:28px"><button class="cta-btn" onclick="go('loans')">Explore Loan Programmes →</button></div>
     </div>
@@ -569,7 +578,13 @@ footer a:hover,footer button.flink:hover{color:#fff}
   </div>
   <section>
     <div class="wrap">
-      <div class="loan-notice"><strong>Important:</strong> The loan categories below are programme descriptions, not a promise of approval or instant funding. Interest rates, fees, limits, repayment periods, eligibility, and availability must be confirmed in a formal loan offer and may vary by country and applicant. Do not pay an upfront “release” fee to receive a loan. This page does not submit or approve loan applications by itself.</div>
+      <div class="loan-access">
+        <div><h3>Ready to apply for a loan?</h3><p>Sign in to your customer portal or create an account to begin an application.</p></div>
+        <div class="loan-access-actions">
+          <a class="cta-ghost" href="/login.html?next=%2F%23loans"><svg style="width:16px;height:16px;vertical-align:-3px;margin-right:5px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M10 17l5-5-5-5M15 12H3"/><path d="M13 4h6a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2h-6"/></svg>Log In</a>
+          <button class="cta-btn" onclick="go('open')"><svg style="width:16px;height:16px;vertical-align:-3px;margin-right:5px" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="9" cy="8" r="3.5"/><path d="M3 20c.5-3.5 2.5-5 6-5M18 8v8M14 12h8"/></svg>Open an Account</button>
+        </div>
+      </div>
       <div class="section-head">
         <div class="eyebrow">Choose a programme</div>
         <h2>Find the type of financing that fits your needs</h2>
@@ -577,53 +592,60 @@ footer a:hover,footer button.flink:hover{color:#fff}
       </div>
       <div class="grid3">
         <article class="card loan-card">
-          <div class="icon-badge">↗</div><h3>Personal Loan</h3>
+          <div class="icon-badge"><svg class="loan-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="3.5"/><path d="M5 20c.6-3.3 3.1-5 7-5s6.4 1.7 7 5"/><path d="M18 4v4M16 6h4"/></svg></div><h3>Personal Loan</h3>
           <p>For eligible personal expenses, home needs, education costs, or planned purchases.</p>
           <div><strong>Loan amount</strong><p>Confirmed after eligibility assessment</p></div>
           <div><strong>Repayment</strong><p>Monthly instalments under the written offer</p></div>
           <ul><li>Government-issued identification</li><li>Proof of residence and income</li><li>Assessment of existing financial commitments</li></ul>
-          <button class="cta-btn" onclick="loanSignIn()">Sign in to apply</button>
+          <button class="cta-btn" onclick="loanSignIn('Personal Loan')">Sign in to apply</button>
         </article>
         <article class="card loan-card">
-          <div class="icon-badge">▦</div><h3>Business Loan</h3>
+          <div class="icon-badge"><svg class="loan-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="7" width="18" height="13" rx="2"/><path d="M8 7V4h8v3M3 12h18M10 12v2h4v-2"/></svg></div><h3>Business Loan</h3>
           <p>For eligible businesses seeking working capital, equipment, inventory, or expansion financing.</p>
           <div><strong>Loan amount</strong><p>Based on business profile and repayment capacity</p></div>
           <div><strong>Repayment</strong><p>Schedule and security requirements confirmed in the offer</p></div>
           <ul><li>Business registration documents</li><li>Business bank statements and financial records</li><li>Purpose of financing and cash-flow information</li></ul>
-          <button class="cta-btn" onclick="loanSignIn()">Sign in to apply</button>
+          <button class="cta-btn" onclick="loanSignIn('Business Loan')">Sign in to apply</button>
         </article>
         <article class="card loan-card">
-          <div class="icon-badge">⌂</div><h3>Emergency Loan</h3>
+          <div class="icon-badge"><svg class="loan-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3 21 19H3L12 3Z"/><path d="M12 9v4M12 16h.01"/></svg></div><h3>Emergency Loan</h3>
           <p>For qualifying urgent expenses, with a careful review of affordability and repayment timing.</p>
           <div><strong>Loan amount</strong><p>Subject to eligibility and verified need</p></div>
           <div><strong>Repayment</strong><p>Due dates, total cost, and instalments disclosed before acceptance</p></div>
           <ul><li>Valid identification and contact details</li><li>Proof of income or repayment source</li><li>Affordability and identity checks</li></ul>
-          <button class="cta-btn" onclick="loanSignIn()">Sign in to apply</button>
+          <button class="cta-btn" onclick="loanSignIn('Emergency Loan')">Sign in to apply</button>
         </article>
         <article class="card loan-card">
-          <div class="icon-badge">⌂</div><h3>Home Improvement Loan</h3>
+          <div class="icon-badge"><svg class="loan-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m3 11 9-8 9 8"/><path d="M5 10v10h14V10M9 20v-6h6v6"/></svg></div><h3>Home Improvement Loan</h3>
           <p>Financing consideration for eligible repairs, renovations, or essential property improvements.</p>
           <div><strong>Loan amount</strong><p>Based on approved project and affordability</p></div>
           <div><strong>Repayment</strong><p>Term and payment schedule disclosed in writing</p></div>
           <ul><li>Proof of income and residence</li><li>Project estimate or contractor quotation</li><li>Evidence of ownership or permission, if required</li></ul>
-          <button class="cta-btn" onclick="loanSignIn()">Sign in to apply</button>
+          <button class="cta-btn" onclick="loanSignIn('Home Improvement Loan')">Sign in to apply</button>
         </article>
         <article class="card loan-card">
-          <div class="icon-badge">▤</div><h3>Education Loan</h3>
+          <div class="icon-badge"><svg class="loan-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m2 9 10-5 10 5-10 5L2 9Z"/><path d="M6 11v5c3.5 3 8.5 3 12 0v-5M22 9v6"/></svg></div><h3>Education Loan</h3>
           <p>For qualifying tuition, training, and approved education-related expenses.</p>
           <div><strong>Loan amount</strong><p>Based on documented education costs and assessment</p></div>
           <div><strong>Repayment</strong><p>Any grace period or special schedule must be written in the offer</p></div>
           <ul><li>Admission or enrolment evidence</li><li>Tuition or fee statement</li><li>Applicant/guarantor information where applicable</li></ul>
-          <button class="cta-btn" onclick="loanSignIn()">Sign in to apply</button>
+          <button class="cta-btn" onclick="loanSignIn('Education Loan')">Sign in to apply</button>
         </article>
         <article class="card loan-card">
-          <div class="icon-badge">▣</div><h3>Vehicle Loan</h3>
+          <div class="icon-badge"><svg class="loan-icon" viewBox="0 0 24 24" aria-hidden="true"><path d="m5 11 2-5h10l2 5"/><rect x="3" y="10" width="18" height="8" rx="2"/><path d="M6 18v2M18 18v2M6 14h.01M18 14h.01"/></svg></div><h3>Vehicle Loan</h3>
           <p>For eligible vehicle purchases, subject to vehicle checks and any required security.</p>
           <div><strong>Loan amount</strong><p>Based on vehicle value, deposit, and affordability</p></div>
           <div><strong>Repayment</strong><p>Instalments and any collateral terms disclosed in writing</p></div>
           <ul><li>Valid identification and income proof</li><li>Vehicle quotation or purchase details</li><li>Insurance or security documentation, if required</li></ul>
-          <button class="cta-btn" onclick="loanSignIn()">Sign in to apply</button>
+          <button class="cta-btn" onclick="loanSignIn('Vehicle Loan')">Sign in to apply</button>
         </article>
+      </div>
+      <div class="loan-access" style="margin-top:28px;margin-bottom:0">
+        <div><h3>New to online banking?</h3><p>Create an account first, then return to the loan programme you want to explore.</p></div>
+        <div class="loan-access-actions">
+          <a class="cta-ghost" href="/login.html?next=%2F%23loans">Customer Log In</a>
+          <button class="cta-btn" onclick="go('open')">Create Account</button>
+        </div>
       </div>
     </div>
   </section>
@@ -757,6 +779,7 @@ footer a:hover,footer button.flink:hover{color:#fff}
         <span class="brand-text"><span class="brand-name">Westpac Global</span><span class="brand-sub">International Bank</span></span>
       </div>
       <p style="color:#9fb0c3;font-size:13.8px;max-width:30ch">Westpac Global International Bank Ltd. is headquartered in Nassau, The Bahamas.</p>
+      <p class="demo-footer-note">Website prototype for demonstration. Banking, lending, licensing, and account services must be independently verified before public use.</p>
       <div class="social-row">
         <a href="#" aria-label="LinkedIn"><svg width="16" height="16" viewBox="0 0 24 24" fill="#cfd9e6"><path d="M4.98 3.5a2.5 2.5 0 11-.02 5 2.5 2.5 0 01.02-5zM3 9h4v12H3zM9 9h3.8v1.7h.05c.53-1 1.84-2.05 3.78-2.05C20.6 8.65 21 11 21 14.1V21h-4v-6.1c0-1.45-.03-3.3-2.02-3.3-2.03 0-2.34 1.58-2.34 3.2V21H9z"/></svg></a>
         <a href="#" aria-label="X / Twitter"><svg width="16" height="16" viewBox="0 0 24 24" fill="#cfd9e6"><path d="M3 3l7.5 9.5L3.3 21h2.4l6-6.9 4.8 6.9H21l-7.9-10 7-8.1h-2.4l-5.5 6.3L8 3z"/></svg></a>
@@ -813,8 +836,11 @@ function go(id){
   if(id==='home') renderReviews();
 }
 function closeMobile(){document.getElementById('mobileMenu').classList.remove('open');}
-function loanSignIn(){
-  window.location.href='/login.html?next=%2F%23loans';
+function loanSignIn(program){
+  var next='/#loans';
+  var url='/login.html?next='+encodeURIComponent(next);
+  if(program) url+='&loanProgram='+encodeURIComponent(program);
+  window.location.href=url;
 }
 
 /* ---- Local data store (browser localStorage) ---- */
