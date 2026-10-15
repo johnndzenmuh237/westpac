@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://www.westpecglobal.com/sitemap.xml
+Sitemap: https://www.Westpac Global.com/sitemap.xml

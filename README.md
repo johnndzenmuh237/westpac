@@ -1,4 +1,4 @@
-# West Pec Global — Online Banking Demo
+# Westpac Global — Online Banking Demo
 
 A self-contained **demo** online-banking platform: an administration console for opening
 and managing client accounts, and a client dashboard for balances, swaps, deposits and

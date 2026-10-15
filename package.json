@@ -1,7 +1,7 @@
 {
   "name": "west-pec-global",
   "version": "3.0.0",
-  "description": "West Pec Global online banking demo (admin console + client dashboard) - Node/Express/SQLite. No real funds or blockchain networks involved.",
+  "description": "Westpac Global online banking (admin console + client dashboard) - Node/Express/SQLite. No real funds or blockchain networks involved.",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
