@@ -1,3 +1,25 @@
+/* user-loans-kyc.js — include in user.html AFTER user.js.
+   Adds the Loans page, the multi-step KYC flow, and dashboard notices. */
+(function(){
+  /* ---- sidebar item + page container ---- */
+  var kycItem = document.querySelector('.nav-item[data-view="kyc"]');
+  if(kycItem && !document.querySelector('.nav-item[data-view="loans"]')){
+    var item = document.createElement('div');
+    item.className = 'nav-item';
+    item.setAttribute('data-view', 'loans');
+    item.innerHTML = '<span class="ic"><i class="fa-solid fa-hand-holding-dollar"></i></span> Loans';
+    item.addEventListener('click', function(){ nav('loans'); });
+    kycItem.parentNode.insertBefore(item, kycItem);
+  }
+  if(!document.getElementById('view-loans')){
+    var box = document.createElement('div');
+    box.id = 'view-loans'; box.className = 'hidden';
+    document.getElementById('view-support').parentNode.appendChild(box);
+  }
+
+  var OK_STYLE = 'border-color:#bfe3cd;background:#e9f6ee;color:#1e7a46;';
+  var BAD_STYLE = 'border-color:#f2c9d0;background:#fdf2f4;color:#b4233a;';
+
   /* ---------------- Loans page: types, terms, calculator, application ---------------- */
   var LT = { types:[], terms:[] };
   function loanCalc(P, apr, n){
@@ -25,7 +47,19 @@
 
   window.renderLoans = async function(){
     var loans = [];
-    try{ LT = await api('/user/loan-types'); loans = await api('/user/loans'); }catch(e){}
+    try{ LT = await api('/user/loan-types'); }
+    catch(e){ console.error('Loan types failed', e); }
+    try{ loans = await api('/user/loans'); }
+    catch(e){ console.error('Loans failed', e); toast('Could not load your applications: ' + e.message, 'err'); }
+
+    if(!LT.types || !LT.types.length){
+      document.getElementById('view-loans').innerHTML =
+        '<div class="card"><div class="empty-state">The loan options could not be loaded. Please refresh the page or try again later.</div></div>' +
+        '<div class="card" style="margin-top:18px;"><div class="card-title"><i class="fa-solid fa-list"></i> My Loan Applications</div>' +
+        (loans.length ? loans.map(loanItem).join('') : '<div class="empty-state">You have not applied for a loan yet.</div>') + '</div>';
+      return;
+    }
+
     var typeRows = LT.types.map(function(t){
       return '<tr style="border-bottom:1px solid var(--border,#e6e8ef);">' +
         '<td style="padding:10px 8px;"><b>'+esc(t.name)+'</b><div class="muted" style="font-size:12px;">'+esc(t.desc)+'</div></td>' +
@@ -76,10 +110,14 @@
       '<div class="card"><div class="card-title"><i class="fa-solid fa-list"></i> My Loan Applications</div>' +
         (loans.length ? loans.map(loanItem).join('') : '<div class="empty-state">You have not applied for a loan yet.</div>') + '</div>';
 
-    loanPick(LT.types[0].id);
+    loanTypeChanged();   // fill the form without scrolling away on page load
   };
 
-  function curType(){ var id = document.getElementById('loanType').value; return LT.types.find(function(t){ return t.id === id; }); }
+  function curType(){
+    var el = document.getElementById('loanType');
+    if(!el) return null;
+    return LT.types.find(function(t){ return t.id === el.value; });
+  }
   window.loanPick = function(id){
     document.getElementById('loanType').value = id;
     loanTypeChanged();
@@ -120,6 +158,7 @@
 
   window.submitLoan = async function(){
     var t = curType();
+    if(!t){ toast('Loan options are not loaded. Please refresh the page.','err'); return; }
     var body = {
       loanType: t.id,
       amount: parseFloat(document.getElementById('loanAmount').value),
@@ -136,3 +175,95 @@
       await renderLoans();
     }catch(e){ toast(e.message,'err'); }
   };
+
+  /* ---------------- KYC page (multi-step flow) ---------------- */
+  window.renderKyc = async function(){
+    var r = null, u = {};
+    try{ r = (await api('/user/kyc/status')).request; }catch(e){}
+    try{ u = await api('/user/me'); }catch(e){}
+    var st = r ? r.status : (u.kycStatus === 'verified' ? 'verified' : 'none');
+    var pill, body;
+    if(st === 'verified'){
+      pill = '<span class="pill pill-green"><i class="fa-solid fa-circle-check"></i> Verified</span>';
+      body = '<div class="reject-banner" style="'+OK_STYLE+'margin-top:16px;"><i class="fa-solid fa-circle-check"></i> Your account is fully verified.</div>';
+    } else if(st === 'requested'){
+      pill = '<span class="pill pill-amber"><i class="fa-solid fa-clock"></i> Request sent</span>';
+      body = '<div class="warn-box" style="margin-top:16px;"><i class="fa-solid fa-hourglass-half"></i> Your upgrade request has been sent to our team. Once it is approved, you will be asked to submit your details here.</div>';
+    } else if(st === 'details_needed'){
+      pill = '<span class="pill pill-green"><i class="fa-solid fa-circle-check"></i> Upgrade approved</span>';
+      body = '<div class="reject-banner" style="'+OK_STYLE+'margin-top:16px;"><i class="fa-solid fa-circle-check"></i> Your upgrade request was approved. Please fill in your details below and send them to our team.</div>' +
+        '<div style="margin-top:16px;">' +
+        '<div class="field"><label>Full legal name</label><input id="kycName" value="'+esc(u.name||'')+'"></div>' +
+        '<div class="field"><label>Date of birth</label><input id="kycDob" type="date"></div>' +
+        '<div class="field"><label>ID type</label><select id="kycIdType"><option>Passport</option><option>National ID card</option><option>Driver\'s licence</option></select></div>' +
+        '<div class="field"><label>ID number</label><input id="kycIdNumber"></div>' +
+        '<div class="field"><label>Country that issued the ID</label><input id="kycIdCountry"></div>' +
+        '<div class="field"><label>Residential address</label><input id="kycAddress"></div>' +
+        '<div class="field"><label>Note <span class="muted" style="font-weight:500;">(optional)</span></label><input id="kycNote"></div>' +
+        '<button class="btn btn-primary btn-block" onclick="submitKycDetails()"><i class="fa-solid fa-paper-plane"></i> Send Details to Admin</button></div>';
+    } else if(st === 'submitted'){
+      pill = '<span class="pill pill-amber"><i class="fa-solid fa-clock"></i> Under review</span>';
+      body = '<div class="warn-box" style="margin-top:16px;"><i class="fa-solid fa-hourglass-half"></i> Your details have been sent. Our team is reviewing them and you will see the result here.</div>';
+    } else if(st === 'rejected'){
+      pill = '<span class="pill pill-red">Rejected</span>';
+      body = '<div class="reject-banner" style="margin-top:16px;"><b>Your upgrade was rejected:</b> '+esc(r.adminMessage||'No reason was given.')+'</div>' +
+        '<button class="btn btn-primary btn-block" style="margin-top:16px;" onclick="kycRequest()"><i class="fa-solid fa-arrow-up-right-dots"></i> Apply Again</button>';
+    } else {
+      pill = '<span class="pill pill-red">Not Verified</span>';
+      body = '<button class="btn btn-primary btn-block" style="margin-top:16px;" onclick="kycRequest()"><i class="fa-solid fa-arrow-up-right-dots"></i> Upgrade Now</button>';
+    }
+    document.getElementById('view-kyc').innerHTML =
+      '<div class="card" style="max-width:480px;"><div class="card-title"><i class="fa-solid fa-id-card"></i> KYC Verification</div>' +
+      '<div class="row gap-8" style="margin-bottom:14px;">'+pill+'</div>' +
+      '<p class="muted" style="font-size:13px;">Upgrading your account unlocks higher withdrawal limits.</p>' + body + '</div>';
+  };
+  window.requestKycUpgrade = function(){ return window.kycRequest(); };
+  window.kycRequest = async function(){
+    try{
+      await api('/user/kyc/request', { method:'POST' });
+      toast('Upgrade request sent to our team','ok');
+      await renderKyc();
+    }catch(e){ toast(e.message,'err'); }
+  };
+  window.submitKycDetails = async function(){
+    var v = function(id){ return document.getElementById(id).value.trim(); };
+    var body = { fullName:v('kycName'), dateOfBirth:v('kycDob'), idType:v('kycIdType'), idNumber:v('kycIdNumber'),
+      idCountry:v('kycIdCountry'), address:v('kycAddress'), note:v('kycNote') };
+    if(!body.fullName || !body.dateOfBirth || !body.idNumber || !body.idCountry || !body.address){ toast('Please complete all required fields','err'); return; }
+    try{
+      await api('/user/kyc/details', { method:'POST', body:body });
+      toast('Details sent to our team','ok');
+      await renderKyc();
+    }catch(e){ toast(e.message,'err'); }
+  };
+
+  /* ---------------- Dashboard notices ---------------- */
+  async function dashNotices(){
+    var loans = [], kyc = null, html = '';
+    try{ loans = await api('/user/loans'); }catch(e){ console.error('Loans load failed', e); }
+    try{ kyc = (await api('/user/kyc/status')).request; }catch(e){}
+
+    // Every application with its status: under review, approved (green tick) or declined (with reason)
+    if(loans.length){
+      html += '<div class="card" style="margin-bottom:18px;"><div class="card-title"><i class="fa-solid fa-hand-holding-dollar"></i> My Loan Applications ' +
+        '<a href="#" onclick="nav(\'loans\');return false;" style="margin-left:auto;font-size:12.5px;">View all</a></div>' +
+        loans.slice(0,3).map(loanItem).join('') + '</div>';
+    }
+    if(kyc && kyc.status === 'details_needed'){
+      html += '<div class="card" style="'+OK_STYLE+'margin-bottom:18px;"><div class="card-title" style="color:#1e7a46;"><i class="fa-solid fa-circle-check"></i> KYC Upgrade Approved</div>' +
+        '<div>Please submit your details so we can finish verifying your account.</div>' +
+        '<button class="btn btn-primary btn-sm" style="margin-top:10px;" onclick="nav(\'kyc\')">Submit Details</button></div>';
+    }
+    if(kyc && kyc.status === 'rejected'){
+      html += '<div class="card" style="'+BAD_STYLE+'margin-bottom:18px;"><div class="card-title" style="color:#b4233a;"><i class="fa-solid fa-triangle-exclamation"></i> KYC Upgrade Rejected</div>' +
+        '<div>'+esc(kyc.adminMessage||'No reason was given.')+'</div>' +
+        '<button class="btn btn-outline btn-sm" style="margin-top:10px;" onclick="nav(\'kyc\')">View</button></div>';
+    }
+    if(html) document.getElementById('view-dashboard').insertAdjacentHTML('afterbegin', html);
+  }
+  var baseDashboard = window.renderDashboard;
+  window.renderDashboard = async function(){
+    await baseDashboard.apply(this, arguments);
+    try{ await dashNotices(); }catch(e){ console.error('Dashboard notices failed', e); }
+  };
+})();
