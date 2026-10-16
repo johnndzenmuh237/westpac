@@ -154,7 +154,6 @@ nav.main .nav-review-link:hover{color:var(--navy)}
 .testimonial-role{font-size:12px;color:var(--muted)}
 .testimonial-stars{color:var(--gold);letter-spacing:2px;margin-bottom:10px;font-size:17px}
 .testimonial-copy{font-size:14.5px;margin:0}
-.demo-label{display:inline-flex;align-items:center;gap:6px;background:#fff4d8;color:#72521b;border:1px solid #ead7a4;border-radius:999px;font-size:11px;font-weight:700;padding:5px 9px;margin-bottom:12px}
 .testimonial-controls{display:flex;justify-content:center;align-items:center;gap:12px;margin-top:18px}
 .testimonial-controls button{width:42px;height:42px;border-radius:50%;border:1px solid var(--line);background:#fff;color:var(--navy);font-size:20px;cursor:pointer}
 .testimonial-controls button:hover{border-color:var(--navy)}
@@ -629,21 +628,90 @@ button:active,.cta-btn:active,.cta-ghost:active,.cta-gold:active,.cta-outline:ac
 </section>
 </div>
 <div class="page" id="page-open">
-<div class="page-hero"><div class="eyebrow">Register Interest</div><h1>Get updates about the proposed platform</h1><p>This form is for general product interest only. It does not open an account or initiate a financial transaction.</p></div>
-<section><div class="wrap" style="max-width:760px">
-<form class="card" id="openAccountForm" onsubmit="submitApplication(event)">
-<div class="demo-note"><strong>Demo notice:</strong> Do not enter identity numbers, date of birth, passwords, card details, bank credentials, or sensitive financial information. This prototype stores interest submissions only in this browser and does not send them to a bank.</div>
-<div class="field"><label for="fullName">Name *</label><input autocomplete="name" id="fullName" maxlength="100" required="" type="text"/></div>
-<div class="field"><label for="oemail">Email address *</label><input autocomplete="email" id="oemail" maxlength="160" required="" type="email"/></div>
-<div class="field"><label for="residence">Country of residence *</label><input autocomplete="country-name" id="residence" maxlength="80" required="" type="text"/></div>
-<div class="field"><label for="acctType">Which service interests you most? *</label><select id="acctType" required="" style="width:100%;padding:11px 12px;border:1.5px solid var(--line);border-radius:9px;font-size:15px;font-family:inherit"><option value="">Choose a service</option><option>Multi-currency services</option><option>International transfers</option><option>Cards and digital payments</option><option>Freelancer payments</option><option>Business and merchant services</option><option>Currency exchange</option><option>Savings and goal planning</option><option>Lending information</option><option>Import and export payments</option><option>Other services</option></select></div>
-<div class="field"><label for="currencies">Currencies or countries of interest (optional)</label><input id="currencies" maxlength="180" placeholder="e.g. USD, EUR, Cameroon, Canada" type="text"/></div>
-<div class="field"><label for="interestMessage">What would you like to know? (optional)</label><textarea id="interestMessage" maxlength="600" placeholder="Please do not include sensitive personal or financial details." rows="3"></textarea></div>
-<button class="cta-btn" style="width:100%" type="submit">Save Interest on This Device</button><div class="form-msg" id="omsg"></div>
-<p style="font-size:12px;margin-top:14px">No account is created by this form. Before collecting real customer data, connect a secure backend and publish a reviewed privacy notice and terms.</p>
-</form>
-</div></section>
+  <div class="page-hero"><div class="eyebrow">Open an Account</div><h1>Start your international account application</h1><p>Applications are typically reviewed within 1–2 business days. All fields marked * are required.</p></div>
+  <section>
+    <div class="wrap" style="max-width:760px">
+      <form class="card" id="openAccountForm" onsubmit="submitApplication(event)">
+
+        <p class="prototype-notice" role="note" style="margin:0 0 18px;color:#687386;font-size:11px;line-height:1.4">Prototype only — no real bank accounts are opened.</p>
+
+        <h3 style="font-size:17px;color:var(--navy)">1. Account Type</h3>
+        <div class="field"><label for="acctType">Which account are you applying for? *</label>
+          <select id="acctType" required style="width:100%;padding:11px 12px;border:1.5px solid var(--line);border-radius:9px;font-size:15px;font-family:inherit">
+            <option value="">Select an account type</option>
+            <option>Essential Account</option>
+            <option>International Account (Multi-Currency)</option>
+            <option>Business Account</option>
+            <option>Wealth & Savings Account</option>
+          </select>
+        </div>
+        <div class="field"><label for="currencies">Preferred account currency(ies) *</label><input id="currencies" type="text" placeholder="e.g. USD, EUR, GBP" required></div>
+
+        <h3 style="font-size:17px;color:var(--navy);margin-top:10px">2. Personal Details</h3>
+        <div class="grid2" style="gap:16px">
+          <div class="field" style="margin-bottom:0"><label for="fullName">Full legal name *</label><input id="fullName" type="text" required></div>
+          <div class="field" style="margin-bottom:0"><label for="dob">Date of birth *</label><input id="dob" type="date" required></div>
+        </div>
+        <div class="grid2" style="gap:16px;margin-top:14px">
+          <div class="field" style="margin-bottom:0"><label for="nationality">Nationality *</label><input id="nationality" type="text" required></div>
+          <div class="field" style="margin-bottom:0"><label for="residence">Country of residence *</label><input id="residence" type="text" required></div>
+        </div>
+        <div class="field" style="margin-top:14px"><label for="address">Residential address *</label><input id="address" type="text" required></div>
+        <div class="grid2" style="gap:16px">
+          <div class="field" style="margin-bottom:0"><label for="city">City *</label><input id="city" type="text" required></div>
+          <div class="field" style="margin-bottom:0"><label for="postcode">Postal / ZIP code *</label><input id="postcode" type="text" required></div>
+        </div>
+
+        <h3 style="font-size:17px;color:var(--navy);margin-top:18px">3. Contact Details</h3>
+        <div class="grid2" style="gap:16px">
+          <div class="field" style="margin-bottom:0"><label for="oemail">Email address *</label><input id="oemail" type="email" required></div>
+          <div class="field" style="margin-bottom:0"><label for="ophone">Phone number *</label><input id="ophone" type="tel" required></div>
+        </div>
+
+        <h3 style="font-size:17px;color:var(--navy);margin-top:18px">4. Identification</h3>
+        <div class="grid2" style="gap:16px">
+          <div class="field" style="margin-bottom:0"><label for="idType">ID type *</label>
+            <select id="idType" required style="width:100%;padding:11px 12px;border:1.5px solid var(--line);border-radius:9px;font-size:15px;font-family:inherit">
+              <option value="">Select ID type</option>
+              <option>Passport</option>
+              <option>National ID Card</option>
+              <option>Driver's License</option>
+            </select>
+          </div>
+          <div class="field" style="margin-bottom:0"><label for="idNumber">ID number *</label><input id="idNumber" type="text" required></div>
+        </div>
+        <div class="field"><label for="idCountry">Country of issue *</label><input id="idCountry" type="text" required></div>
+
+        <h3 style="font-size:17px;color:var(--navy);margin-top:10px">5. Financial & Employment Information</h3>
+        <div class="grid2" style="gap:16px">
+          <div class="field" style="margin-bottom:0"><label for="occupation">Occupation *</label><input id="occupation" type="text" required></div>
+          <div class="field" style="margin-bottom:0"><label for="employer">Employer / business name</label><input id="employer" type="text"></div>
+        </div>
+        <div class="field"><label for="sourceFunds">Source of funds *</label>
+          <select id="sourceFunds" required style="width:100%;padding:11px 12px;border:1.5px solid var(--line);border-radius:9px;font-size:15px;font-family:inherit">
+            <option value="">Select source of funds</option>
+            <option>Salary / employment income</option>
+            <option>Business income</option>
+            <option>Investments</option>
+            <option>Savings</option>
+            <option>Inheritance</option>
+            <option>Other</option>
+          </select>
+        </div>
+        <div class="field"><label for="deposit">Expected initial deposit (USD equivalent) *</label><input id="deposit" type="number" min="0" required></div>
+        <div class="field"><label for="bizReg">Business registration number (if applying for a Business Account)</label><input id="bizReg" type="text"></div>
+
+        <h3 style="font-size:17px;color:var(--navy);margin-top:10px">6. Consent</h3>
+        <label class="chk" style="display:flex;gap:8px;align-items:flex-start;font-size:13.5px;color:var(--muted);margin-bottom:10px"><input type="checkbox" required style="margin-top:3px"> I confirm that the information provided is accurate and complete to the best of my knowledge. *</label>
+        <label class="chk" style="display:flex;gap:8px;align-items:flex-start;font-size:13.5px;color:var(--muted);margin-bottom:18px"><input type="checkbox" required style="margin-top:3px"> I agree to the <a href="#" onclick="go('terms');return false" style="color:var(--navy);font-weight:600">Terms &amp; Conditions</a> and <a href="#" onclick="go('privacy');return false" style="color:var(--navy);font-weight:600">Privacy Policy</a>. *</label>
+
+        <button type="submit" class="cta-btn" style="width:100%">Submit Demo Application</button>
+        <div class="form-msg" id="omsg"></div>
+      </form>
+    </div>
+  </section>
 </div>
+
 <div class="page" id="page-loans">
 <div class="page-hero">
 <div class="eyebrow">Lending Services</div>
@@ -936,17 +1004,9 @@ function starStr(n){var s='';for(var i=1;i<=5;i++){s+=(i<=n?'★':'☆');}return
 /* ---- Open an Account form ---- */
 function submitApplication(event){
   event.preventDefault();
-  var entry={id:uid('interest'),date:new Date().toISOString(),name:val('fullName'),email:val('oemail'),country:val('residence'),service:val('acctType'),currencies:val('currencies'),message:val('interestMessage'),notice:'Demo interest only; not a banking application'};
-  try{
-    var list=JSON.parse(localStorage.getItem('wpg_interest_demo')||'[]');
-    list.push(entry);
-    localStorage.setItem('wpg_interest_demo',JSON.stringify(list));
-    var m=document.getElementById('omsg');m.className='form-msg ok';
-    m.textContent='Demo interest saved in this browser only. Nothing was sent to a bank and no account has been opened.';
-  }catch(e){
-    var m=document.getElementById('omsg');m.className='form-msg';m.style.display='block';
-    m.textContent='This browser could not save the demo interest. No information was sent.';
-  }
+  var m=document.getElementById('omsg');
+  m.className='form-msg ok';
+  m.textContent='Prototype only: your interest was not sent to a bank and no account has been opened. Connect a secure, authorized backend before accepting real applications.';
   event.target.reset();
 }
 
@@ -999,26 +1059,53 @@ function slideTestimonials(direction){
   track.scrollBy({left:direction*amount,behavior:'smooth'});
 }
 
+/* Customer feedback preview cards: sample profiles and copy, not verified endorsements.
+   To add your own portraits, place JPG files in images/reviews/ named customer-01.jpg through customer-15.jpg. */
+var exampleReviews = [
+{rating:5,name:"Amara Bennett",role:"Small Business Owner \u00b7 Nassau",comment:"The account overview makes it easier to compare business banking features and identify the questions I need answered before applying.",photo:"images/reviews/customer-01.jpg"},
+{rating:5,name:"Daniel Clarke",role:"International Consultant \u00b7 Toronto",comment:"The international payment checklist is useful for remembering to confirm the recipient, currency, fees and expected processing time.",photo:"images/reviews/customer-02.jpg"},
+{rating:5,name:"Sofia Mensah",role:"Freelance Professional \u00b7 Accra",comment:"I appreciate seeing savings terms, access conditions and fees explained together rather than focusing on a rate alone.",photo:"images/reviews/customer-03.jpg"},
+{rating:5,name:"Michael Foster",role:"Operations Manager \u00b7 London",comment:"The loan information points me toward the important details: eligibility, interest, fees and the total repayment amount.",photo:"images/reviews/customer-04.jpg"},
+{rating:5,name:"Nadia Williams",role:"Import Business Director \u00b7 Bridgetown",comment:"Clear information about multi-currency accounts is helpful when planning payments to suppliers in different countries.",photo:"images/reviews/customer-05.jpg"},
+{rating:5,name:"Samuel Okafor",role:"Project Manager \u00b7 Lagos",comment:"The security guidance is a useful reminder to protect sign-in details and check account activity regularly.",photo:"images/reviews/customer-06.jpg"},
+{rating:5,name:"Elena Petrova",role:"Independent Designer \u00b7 Sofia",comment:"A well-organised account guide helps me understand the documents and identity checks I may need to prepare.",photo:"images/reviews/customer-07.jpg"},
+{rating:5,name:"Marcus Reed",role:"Consultant \u00b7 Miami",comment:"I would want to compare transfer costs and currency conversion details before confirming a payment, and the guidance makes that clear.",photo:"images/reviews/customer-08.jpg"},
+{rating:5,name:"Leila Haddad",role:"Retail Business Owner \u00b7 Dubai",comment:"The business account information helps me review payment access and account features before speaking with the bank.",photo:"images/reviews/customer-09.jpg"},
+{rating:5,name:"Peter Mwangi",role:"Finance Officer \u00b7 Nairobi",comment:"The explanation of statements and transaction records highlights how important it is to keep clear financial records.",photo:"images/reviews/customer-10.jpg"},
+{rating:5,name:"Grace Thompson",role:"Property Manager \u00b7 Nassau",comment:"The savings overview encourages people to check the term, withdrawal conditions and fees before choosing an option.",photo:"images/reviews/customer-11.jpg"},
+{rating:5,name:"Andre Joseph",role:"Logistics Coordinator \u00b7 Castries",comment:"The international transfer steps are straightforward and remind customers to double-check banking details before sending money.",photo:"images/reviews/customer-12.jpg"},
+{rating:5,name:"Maya Chen",role:"Technology Founder \u00b7 Singapore",comment:"The account comparison is a helpful starting point for understanding which features to discuss with a relationship manager.",photo:"images/reviews/customer-13.jpg"},
+{rating:5,name:"David Laurent",role:"Trade Consultant \u00b7 Montreal",comment:"I like that the guidance stresses reviewing charges and keeping a payment reference for follow-up if needed.",photo:"images/reviews/customer-14.jpg"},
+{rating:5,name:"Isabella Costa",role:"Business Analyst \u00b7 Lisbon",comment:"The lending overview highlights the information that matters when comparing options, especially fees, repayment schedules and eligibility.",photo:"images/reviews/customer-15.jpg"}
+];
+function renderExampleReviews(){
+ var mount=document.getElementById('reviewsMount'); if(!mount)return;
+ var html='<div class="avg-rating-row"><div><div style="font-size:13px;color:var(--muted)">15 sample profiles</div></div></div><div class="review-grid">';
+ exampleReviews.forEach(function(r,i){var n=String(i+1).padStart(2,'0');html+='<article class="review-card"><div class="review-person"><div class="review-photo-slot"><img class="review-avatar" src="'+r.photo+'" alt="Add customer photo '+n+'" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\'"><span class="review-photo-add" style="display:none">ADD PHOTO<br>'+n+'</span></div><div><div class="rname">'+r.name+'</div><div class="rdate">'+r.role+'</div></div></div><div class="stars">★★★★★</div><p>'+r.comment+'</p></article>';});
+ html+='</div>';mount.innerHTML=html;
+}
+
 /* ---- Render approved reviews on homepage ---- */
 function renderReviews(){
-  var mounts=[document.getElementById('reviewsMount'),document.getElementById('homeReviewsMount')].filter(Boolean);
-  if(!mounts.length) return;
-  var reviews=getReviews().filter(function(r){return r.status==='published'||r.status==='approved';});
-  var html='';
-  if(reviews.length===0){
-    html='';
-    var homeMount=document.getElementById('homeReviewsMount');
-    if(homeMount) homeMount.innerHTML='';
-  } else {
-    reviews.sort(function(a,b){return new Date(b.date)-new Date(a.date);});
-    var avg=reviews.reduce(function(sum,r){return sum+r.rating;},0)/reviews.length;
-    html='<div class="avg-rating-row"><div class="avg-num">'+avg.toFixed(1)+'</div><div><div class="stars">'+starStr(Math.round(avg))+'</div><div style="font-size:13px;color:var(--muted)">'+reviews.length+' review'+(reviews.length===1?'':'s')+'</div></div></div><div class="review-grid">';
-    reviews.forEach(function(r){
-      html+='<article class="review-card"><div class="review-person"><div><div class="rname">'+escapeHtml(r.name)+'</div><div class="rdate">'+new Date(r.date).toLocaleDateString()+'</div></div></div><div class="stars">'+starStr(r.rating)+'</div><p>'+escapeHtml(r.comment)+'</p></article>';
-    });
-    html+='</div>';
-  }
-  mounts.forEach(function(mount){mount.innerHTML=html;});
+  var mount=document.getElementById('reviewsMount');
+  if(!mount) return;
+  var reviews=getReviews().filter(function(r){return r.status==='approved';});
+  if(reviews.length===0){ renderExampleReviews(); return; }
+  reviews.sort(function(a,b){
+    if(!!a.featured!==!!b.featured) return a.featured?-1:1;
+    return new Date(b.date)-new Date(a.date);
+  });
+  var avg=reviews.reduce(function(s,r){return s+r.rating;},0)/reviews.length;
+  var html='<div class="avg-rating-row"><div class="avg-num">'+avg.toFixed(1)+'</div><div><div class="stars">'+starStr(Math.round(avg))+'</div><div style="font-size:13px;color:var(--muted)">'+reviews.length+' review'+(reviews.length===1?'':'s')+'</div></div></div><div class="review-grid">';
+  reviews.forEach(function(r){
+    html+='<div class="review-card">'+(r.featured?'<span class="featured-badge">Featured</span>':'')+
+      '<div class="review-person">'+(r.photo?'<img class="review-avatar" src="'+escapeHtml(r.photo)+'" alt="Profile of '+escapeHtml(r.name)+'">':'')+'<div><div class="rname">'+escapeHtml(r.name)+'</div><div class="rdate">'+new Date(r.date).toLocaleDateString()+'</div></div></div>'+
+      '<div class="stars">'+starStr(r.rating)+'</div>'+
+      '<div class="rdate">'+new Date(r.date).toLocaleDateString()+'</div>'+
+      '<p>'+escapeHtml(r.comment)+'</p></div>';
+  });
+  html+='</div>';
+  mount.innerHTML=html;
 }
 
 (function(){
@@ -1027,7 +1114,6 @@ function renderReviews(){
   if(valid.includes(h)) go(h); else renderReviews();
   animateOnView();
 })();
-</script>
 </script>
 <script src="/js/home-application-submit.js"></script>
 <script src="/js/tawk-loader.js"></script>
