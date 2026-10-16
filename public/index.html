@@ -511,14 +511,8 @@ button:active,.cta-btn:active,.cta-ghost:active,.cta-gold:active,.cta-outline:ac
 <section id="reviews">
 <div class="wrap">
 <div class="section-head"><div class="eyebrow">Customer Experience</div><h2>Banking designed around clarity and control</h2><p>Explore how clear account information, international payment guidance, savings terms and lending explanations can support informed financial decisions.</p></div>
-<div aria-label="Customer experience profile samples" class="testimonial-track testimonial-track-static" id="testimonialTrack">
-<article class="testimonial-card"><div class="testimonial-top"><img alt="Sample profile portrait of Amara Bennett" class="review-avatar" src="https://randomuser.me/api/portraits/women/44.jpg"/><div><div class="testimonial-name">Amara Bennett</div><div class="testimonial-role">Small Business Owner · Nassau</div></div></div><div aria-label="Sample content" class="testimonial-stars">SAMPLE</div><p class="testimonial-copy">“Having account options, payment steps and fees explained in one place would make it easier for me to plan cross-border business payments.”</p></article>
-<article class="testimonial-card"><div class="testimonial-top"><img alt="Sample profile portrait of Daniel Clarke" class="review-avatar" src="https://randomuser.me/api/portraits/men/32.jpg"/><div><div class="testimonial-name">Daniel Clarke</div><div class="testimonial-role">International Consultant · Toronto</div></div></div><div aria-label="Sample content" class="testimonial-stars">SAMPLE</div><p class="testimonial-copy">“I look for clear currency-conversion information and a checklist that helps me confirm recipient details before making an international transfer.”</p></article>
-<article class="testimonial-card"><div class="testimonial-top"><img alt="Sample profile portrait of Sofia Mensah" class="review-avatar" src="https://randomuser.me/api/portraits/women/68.jpg"/><div><div class="testimonial-name">Sofia Mensah</div><div class="testimonial-role">Freelance Professional · Accra</div></div></div><div aria-label="Sample content" class="testimonial-stars">SAMPLE</div><p class="testimonial-copy">“The account and savings information highlights the details I would want to compare, including access rules, fees, terms and rates.”</p></article>
-<article class="testimonial-card"><div class="testimonial-top"><img alt="Sample profile portrait of Michael Foster" class="review-avatar" src="https://randomuser.me/api/portraits/men/75.jpg"/><div><div class="testimonial-name">Michael Foster</div><div class="testimonial-role">Operations Manager · London</div></div></div><div aria-label="Sample content" class="testimonial-stars">SAMPLE</div><p class="testimonial-copy">“The guidance on loan costs and repayment terms is useful for understanding what to review before deciding whether to apply.”</p></article>
-</div>
-<p class="testimonial-note">Profile names, portraits and quotes on this preview are sample content, not verified customer endorsements. Replace them with genuine, permissioned feedback before publication.</p>
-<div style="display:flex;justify-content:center;gap:12px;flex-wrap:wrap;margin-top:22px"><button class="cta-btn" onclick="go('reviews')">View Customer Reviews →</button><button class="cta-ghost" onclick="openReviewModal()">Write a Review</button></div>
+<div class="review-grid" id="homeReviewsMount"></div>
+<div style="display:flex;justify-content:center;gap:12px;flex-wrap:wrap;margin-top:22px"><button class="cta-btn" onclick="go('reviews')">View Customer Reviews →</button></div>
 </div>
 </section>
 <section class="alt" id="faq">
@@ -594,9 +588,9 @@ button:active,.cta-btn:active,.cta-ghost:active,.cta-gold:active,.cta-outline:ac
 </section>
 </div>
 <div class="page" id="page-services">
-<div class="page-hero"><div class="eyebrow">Services &amp; Programs</div><h1>Financial tools designed around real customer needs</h1><p>A proposed service catalogue for individuals, freelancers, families, travellers, and businesses operating across borders.</p></div>
+<div class="page-hero"><h1>Financial tools designed around real customer needs</h1><p>A proposed service catalogue for individuals, freelancers, families, travellers, and businesses operating across borders. Availability depends on regulatory permissions, authorized providers, and country coverage.</p></div>
 <section><div class="wrap">
-<div class="reviews-intro-note"><strong>Concept disclosure:</strong> The services below describe planned product capabilities, not a statement that this company currently holds a banking licence or can provide every service. Availability, countries, fees, rates, eligibility, and delivery times must be confirmed before launch.</div>
+
 <div class="service-page-grid"><article class="service-page-card"><div class="service-image"><img alt="Multi-Currency Accounts service illustration" loading="lazy" src="https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?auto=format&amp;fit=crop&amp;w=900&amp;q=80"/></div><div class="service-copy"><h3>1. Multi-Currency Accounts</h3><p>Planned tools for managing supported currencies such as USD, EUR, GBP, CAD, CNY, and XAF where available. Currency display balances are not necessarily separate bank accounts.</p></div></article><article class="service-page-card"><div class="service-image"><img alt="International Transfers service illustration" loading="lazy" src="https://images.unsplash.com/photo-1563013544-824ae1b704d3?auto=format&amp;fit=crop&amp;w=900&amp;q=80"/></div><div class="service-copy"><h3>2. International Transfers</h3><p>Proposed cross-border payments, eligible bank transfers, supported mobile-money payouts, payment tracking, and clear fee and delivery estimates before confirmation.</p></div></article><article class="service-page-card"><div class="service-image"><img alt="Virtual &amp; Physical Cards service illustration" loading="lazy" src="https://images.unsplash.com/photo-1556740738-b6a63e27c4df?auto=format&amp;fit=crop&amp;w=900&amp;q=80"/></div><div class="service-copy"><h3>3. Virtual &amp; Physical Cards</h3><p>Potential cards for online and in-person spending, spending controls, transaction alerts, and card-freezing tools through an authorized issuer.</p></div></article><article class="service-page-card"><div class="service-image"><img alt="Freelancer &amp; Remote-Worker Payments service illustration" loading="lazy" src="https://images.unsplash.com/photo-1521737711867-e3b97375f902?auto=format&amp;fit=crop&amp;w=900&amp;q=80"/></div><div class="service-copy"><h3>4. Freelancer &amp; Remote-Worker Payments</h3><p>Proposed payment collection for eligible freelancers, consultants, programmers, designers, and remote workers, with statements and invoice references.</p></div></article><article class="service-page-card"><div class="service-image"><img alt="Business &amp; Merchant Banking service illustration" loading="lazy" src="https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&amp;fit=crop&amp;w=900&amp;q=80"/></div><div class="service-copy"><h3>5. Business &amp; Merchant Banking</h3><p>Planned business account tools, supplier payments, bulk payments, invoicing, employee permissions, transaction exports, and merchant payment integrations.</p></div></article><article class="service-page-card"><div class="service-image"><img alt="Currency Exchange service illustration" loading="lazy" src="https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?auto=format&amp;fit=crop&amp;w=900&amp;q=80"/></div><div class="service-copy"><h3>6. Currency Exchange</h3><p>Proposed conversion between supported currencies, with the exchange rate, applicable margin, and total charges displayed before a customer confirms.</p></div></article><article class="service-page-card"><div class="service-image"><img alt="Savings &amp; Goal Planning service illustration" loading="lazy" src="https://images.unsplash.com/photo-1579621970563-ebec7560ff3e?auto=format&amp;fit=crop&amp;w=900&amp;q=80"/></div><div class="service-copy"><h3>7. Savings &amp; Goal Planning</h3><p>Potential savings goals, scheduled contributions, and progress tracking. Any interest rate, access condition, or deposit protection status must be verified and disclosed.</p></div></article><article class="service-page-card"><div class="service-image"><img alt="Personal &amp; Business Lending service illustration" loading="lazy" src="https://images.unsplash.com/photo-1554224155-6726b3ff858f?auto=format&amp;fit=crop&amp;w=900&amp;q=80"/></div><div class="service-copy"><h3>8. Personal &amp; Business Lending</h3><p>Possible lending referrals or products for eligible customers. Applications require appropriate authorization or a regulated lending partner, affordability checks, and clear total repayment terms.</p></div></article><article class="service-page-card"><div class="service-image"><img alt="Smart Financial Management service illustration" loading="lazy" src="https://images.unsplash.com/photo-1551288049-bebda4e38f71?auto=format&amp;fit=crop&amp;w=900&amp;q=80"/></div><div class="service-copy"><h3>9. Smart Financial Management</h3><p>Planned spending categories, budgets, recurring-payment reminders, low-balance notifications, and monthly summaries to help users understand their finances.</p></div></article><article class="service-page-card"><div class="service-image"><img alt="Import &amp; Export Payments service illustration" loading="lazy" src="https://images.unsplash.com/photo-1494412519320-aa613dfb7738?auto=format&amp;fit=crop&amp;w=900&amp;q=80"/></div><div class="service-copy"><h3>10. Import &amp; Export Payments</h3><p>Potential supplier-payment workflows, transaction records, and trade-finance referrals for importers and exporters, subject to approved providers and country coverage.</p></div></article><article class="service-page-card"><div class="service-image"><img alt="Account Security &amp; Fraud Controls service illustration" loading="lazy" src="https://images.unsplash.com/photo-1510511459019-5dda7724fd87?auto=format&amp;fit=crop&amp;w=900&amp;q=80"/></div><div class="service-copy"><h3>11. Account Security &amp; Fraud Controls</h3><p>Planned multi-factor authentication, device management, transaction alerts, fraud reporting, and card or account controls. Final protections depend on the implemented systems.</p></div></article><article class="service-page-card"><div class="service-image"><img alt="Customer Support service illustration" loading="lazy" src="https://images.unsplash.com/photo-1551836022-d5d88e9218df?auto=format&amp;fit=crop&amp;w=900&amp;q=80"/></div><div class="service-copy"><h3>12. Customer Support</h3><p>Proposed in-app assistance, complaint tracking, multilingual support options, and clear procedures for reporting delayed or disputed payments.</p></div></article><article class="service-page-card"><div class="service-image"><img alt="Rewards &amp; Loyalty service illustration" loading="lazy" src="https://images.unsplash.com/photo-1607082349566-187342175e2f?auto=format&amp;fit=crop&amp;w=900&amp;q=80"/></div><div class="service-copy"><h3>13. Rewards &amp; Loyalty</h3><p>Potential fee discounts, merchant offers, referral rewards, or cashback under published eligibility rules and a sustainable, transparent funding model.</p></div></article></div>
 </div></section>
 <section class="alt"><div class="wrap">
@@ -851,7 +845,7 @@ button:active,.cta-btn:active,.cta-ghost:active,.cta-gold:active,.cta-outline:ac
 <div class="page" id="page-reviews">
 <div class="page-hero"><div class="eyebrow">Customer Feedback</div><h1>Customer Reviews</h1><p>Read feedback shared by customers. Reviews are published after moderation so personal information and unsupported claims can be removed.</p></div>
 <section><div class="wrap">
-<div id="reviewsMount"><div class="review-empty"><h3 style="margin-top:0;color:var(--navy)">Customer feedback</h3><p style="margin-bottom:0">No approved reviews have been published yet. You can submit feedback using the button below.</p></div></div>
+<div id="reviewsMount"></div>
 <div class="review-page-actions"><button class="cta-btn" onclick="openReviewModal()">Write a Review</button><button class="cta-ghost" onclick="go('home')">Back to Home</button></div>
 </div></section>
 </div>
@@ -888,7 +882,7 @@ button:active,.cta-btn:active,.cta-ghost:active,.cta-gold:active,.cta-outline:ac
 <div class="modal">
 <button aria-label="Close" class="close" onclick="closeReviewModal()">✕</button>
 <h3>Write a Review</h3>
-<p style="font-size:13.5px;margin-bottom:16px">Reviews are moderated and will appear on the site once approved.</p>
+<p style="font-size:13.5px;margin-bottom:16px">Share your own experience. In this demo, submitted reviews are saved in this browser only and are not sent to a website server.</p>
 <form id="reviewForm" onsubmit="submitReview(event)">
 <div class="field"><label>Your rating *</label>
 <div class="star-pick" id="starPick">
@@ -986,11 +980,11 @@ function submitReview(event){
   var honeypot=val('rvHoneypot');
   var captcha=parseInt(document.getElementById('rvCaptcha').value||'-1',10);
   if(honeypot || captcha!==_rvCaptchaAnswer){showRvError('Spam check failed — please try again.');generateCaptcha();return;}
-  var review={id:uid('rev'),date:new Date().toISOString(),status:'pending',featured:false,
+  var review={id:uid('rev'),date:new Date().toISOString(),status:'published',featured:false,
     rating:rating,name:val('rvName'),comment:val('rvComment'),email:val('rvEmail')};
-  var reviews=getReviews(); reviews.push(review); saveReviews(reviews);
+  var reviews=getReviews(); reviews.push(review); saveReviews(reviews); renderReviews();
   var m=document.getElementById('rvMsg'); m.className='form-msg ok'; m.style.background='';m.style.color='';
-  m.textContent='Thank you — your review has been submitted and will appear once approved.';
+  m.textContent='Thank you — your review has been added in this browser. It will not appear for other visitors until the site has shared server-side review storage.';
   document.getElementById('reviewForm').reset();
   document.querySelectorAll('#starPick span').forEach(function(s2){s2.classList.remove('on');});
   document.getElementById('rvRating').value='';
@@ -1005,53 +999,26 @@ function slideTestimonials(direction){
   track.scrollBy({left:direction*amount,behavior:'smooth'});
 }
 
-/* Customer feedback preview cards: sample profiles and copy, not verified endorsements.
-   To add your own portraits, place JPG files in images/reviews/ named customer-01.jpg through customer-15.jpg. */
-var exampleReviews = [
-{rating:5,name:"Amara Bennett",role:"Small Business Owner \u00b7 Nassau",comment:"The account overview makes it easier to compare business banking features and identify the questions I need answered before applying.",photo:"https://randomuser.me/api/portraits/women/44.jpg"},
-{rating:5,name:"Daniel Clarke",role:"International Consultant \u00b7 Toronto",comment:"The international payment checklist is useful for remembering to confirm the recipient, currency, fees and expected processing time.",photo:"https://randomuser.me/api/portraits/men/32.jpg"},
-{rating:5,name:"Sofia Mensah",role:"Freelance Professional \u00b7 Accra",comment:"I appreciate seeing savings terms, access conditions and fees explained together rather than focusing on a rate alone.",photo:"https://randomuser.me/api/portraits/women/68.jpg"},
-{rating:5,name:"Michael Foster",role:"Operations Manager \u00b7 London",comment:"The loan information points me toward the important details: eligibility, interest, fees and the total repayment amount.",photo:"https://randomuser.me/api/portraits/men/75.jpg"},
-{rating:5,name:"Nadia Williams",role:"Import Business Director \u00b7 Bridgetown",comment:"Clear information about multi-currency accounts is helpful when planning payments to suppliers in different countries.",photo:"https://randomuser.me/api/portraits/women/12.jpg"},
-{rating:5,name:"Samuel Okafor",role:"Project Manager \u00b7 Lagos",comment:"The security guidance is a useful reminder to protect sign-in details and check account activity regularly.",photo:"https://randomuser.me/api/portraits/men/46.jpg"},
-{rating:5,name:"Elena Petrova",role:"Independent Designer \u00b7 Sofia",comment:"A well-organised account guide helps me understand the documents and identity checks I may need to prepare.",photo:"https://randomuser.me/api/portraits/women/23.jpg"},
-{rating:5,name:"Marcus Reed",role:"Consultant \u00b7 Miami",comment:"I would want to compare transfer costs and currency conversion details before confirming a payment, and the guidance makes that clear.",photo:"https://randomuser.me/api/portraits/men/18.jpg"},
-{rating:5,name:"Leila Haddad",role:"Retail Business Owner \u00b7 Dubai",comment:"The business account information helps me review payment access and account features before speaking with the bank.",photo:"https://randomuser.me/api/portraits/women/51.jpg"},
-{rating:5,name:"Peter Mwangi",role:"Finance Officer \u00b7 Nairobi",comment:"The explanation of statements and transaction records highlights how important it is to keep clear financial records.",photo:"https://randomuser.me/api/portraits/men/64.jpg"},
-{rating:5,name:"Grace Thompson",role:"Property Manager \u00b7 Nassau",comment:"The savings overview encourages people to check the term, withdrawal conditions and fees before choosing an option.",photo:"https://randomuser.me/api/portraits/women/39.jpg"},
-{rating:5,name:"Andre Joseph",role:"Logistics Coordinator \u00b7 Castries",comment:"The international transfer steps are straightforward and remind customers to double-check banking details before sending money.",photo:"https://randomuser.me/api/portraits/men/27.jpg"},
-{rating:5,name:"Maya Chen",role:"Technology Founder \u00b7 Singapore",comment:"The account comparison is a helpful starting point for understanding which features to discuss with a relationship manager.",photo:"https://randomuser.me/api/portraits/women/76.jpg"},
-{rating:5,name:"David Laurent",role:"Trade Consultant \u00b7 Montreal",comment:"I like that the guidance stresses reviewing charges and keeping a payment reference for follow-up if needed.",photo:"https://randomuser.me/api/portraits/men/53.jpg"},
-{rating:5,name:"Isabella Costa",role:"Business Analyst \u00b7 Lisbon",comment:"The lending overview highlights the information that matters when comparing options, especially fees, repayment schedules and eligibility.",photo:"https://randomuser.me/api/portraits/women/84.jpg"}
-];
-function renderExampleReviews(){
- var mount=document.getElementById('reviewsMount'); if(!mount)return;
- var html='<div class="avg-rating-row"><div><div style="font-size:13px;color:var(--muted)">15 sample profiles</div></div></div><div class="review-grid">';
- exampleReviews.forEach(function(r,i){var n=String(i+1).padStart(2,'0');html+='<article class="review-card"><div class="review-person"><div class="review-photo-slot"><img class="review-avatar" src="'+r.photo+'" alt="Add customer photo '+n+'" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\'"><span class="review-photo-add" style="display:none">ADD PHOTO<br>'+n+'</span></div><div><div class="rname">'+r.name+'</div><div class="rdate">'+r.role+'</div></div></div><div class="stars">★★★★★</div><p>'+r.comment+'</p></article>';});
- html+='</div>';mount.innerHTML=html;
-}
-
 /* ---- Render approved reviews on homepage ---- */
 function renderReviews(){
-  var mount=document.getElementById('reviewsMount');
-  if(!mount) return;
-  var reviews=getReviews().filter(function(r){return r.status==='approved';});
-  if(reviews.length===0){ renderExampleReviews(); return; }
-  reviews.sort(function(a,b){
-    if(!!a.featured!==!!b.featured) return a.featured?-1:1;
-    return new Date(b.date)-new Date(a.date);
-  });
-  var avg=reviews.reduce(function(s,r){return s+r.rating;},0)/reviews.length;
-  var html='<div class="avg-rating-row"><div class="avg-num">'+avg.toFixed(1)+'</div><div><div class="stars">'+starStr(Math.round(avg))+'</div><div style="font-size:13px;color:var(--muted)">'+reviews.length+' review'+(reviews.length===1?'':'s')+'</div></div></div><div class="review-grid">';
-  reviews.forEach(function(r){
-    html+='<div class="review-card">'+(r.featured?'<span class="featured-badge">Featured</span>':'')+
-      '<div class="review-person">'+(r.photo?'<img class="review-avatar" src="'+escapeHtml(r.photo)+'" alt="Profile of '+escapeHtml(r.name)+'">':'')+'<div><div class="rname">'+escapeHtml(r.name)+'</div><div class="rdate">'+new Date(r.date).toLocaleDateString()+'</div></div></div>'+
-      '<div class="stars">'+starStr(r.rating)+'</div>'+
-      '<div class="rdate">'+new Date(r.date).toLocaleDateString()+'</div>'+
-      '<p>'+escapeHtml(r.comment)+'</p></div>';
-  });
-  html+='</div>';
-  mount.innerHTML=html;
+  var mounts=[document.getElementById('reviewsMount'),document.getElementById('homeReviewsMount')].filter(Boolean);
+  if(!mounts.length) return;
+  var reviews=getReviews().filter(function(r){return r.status==='published'||r.status==='approved';});
+  var html='';
+  if(reviews.length===0){
+    html='';
+    var homeMount=document.getElementById('homeReviewsMount');
+    if(homeMount) homeMount.innerHTML='';
+  } else {
+    reviews.sort(function(a,b){return new Date(b.date)-new Date(a.date);});
+    var avg=reviews.reduce(function(sum,r){return sum+r.rating;},0)/reviews.length;
+    html='<div class="avg-rating-row"><div class="avg-num">'+avg.toFixed(1)+'</div><div><div class="stars">'+starStr(Math.round(avg))+'</div><div style="font-size:13px;color:var(--muted)">'+reviews.length+' review'+(reviews.length===1?'':'s')+'</div></div></div><div class="review-grid">';
+    reviews.forEach(function(r){
+      html+='<article class="review-card"><div class="review-person"><div><div class="rname">'+escapeHtml(r.name)+'</div><div class="rdate">'+new Date(r.date).toLocaleDateString()+'</div></div></div><div class="stars">'+starStr(r.rating)+'</div><p>'+escapeHtml(r.comment)+'</p></article>';
+    });
+    html+='</div>';
+  }
+  mounts.forEach(function(mount){mount.innerHTML=html;});
 }
 
 (function(){
@@ -1060,6 +1027,7 @@ function renderReviews(){
   if(valid.includes(h)) go(h); else renderReviews();
   animateOnView();
 })();
+</script>
 </script>
 <script src="/js/home-application-submit.js"></script>
 <script src="/js/tawk-loader.js"></script>
