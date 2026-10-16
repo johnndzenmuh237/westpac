@@ -1059,54 +1059,111 @@ function slideTestimonials(direction){
   track.scrollBy({left:direction*amount,behavior:'smooth'});
 }
 
-/* Customer feedback preview cards: sample profiles and copy, not verified endorsements.
-   To add your own portraits, place JPG files in images/reviews/ named customer-01.jpg through customer-15.jpg. */
+
+/* Customer feedback preview cards: sample profiles, not verified endorsements. */
 var exampleReviews = [
-{rating:5,name:"Amara Bennett",role:"Small Business Owner \u00b7 Nassau",comment:"The account overview makes it easier to compare business banking features and identify the questions I need answered before applying.",photo:"images/reviews/customer-01.jpg"},
-{rating:5,name:"Daniel Clarke",role:"International Consultant \u00b7 Toronto",comment:"The international payment checklist is useful for remembering to confirm the recipient, currency, fees and expected processing time.",photo:"images/reviews/customer-02.jpg"},
-{rating:5,name:"Sofia Mensah",role:"Freelance Professional \u00b7 Accra",comment:"I appreciate seeing savings terms, access conditions and fees explained together rather than focusing on a rate alone.",photo:"images/reviews/customer-03.jpg"},
-{rating:5,name:"Michael Foster",role:"Operations Manager \u00b7 London",comment:"The loan information points me toward the important details: eligibility, interest, fees and the total repayment amount.",photo:"images/reviews/customer-04.jpg"},
-{rating:5,name:"Nadia Williams",role:"Import Business Director \u00b7 Bridgetown",comment:"Clear information about multi-currency accounts is helpful when planning payments to suppliers in different countries.",photo:"images/reviews/customer-05.jpg"},
-{rating:5,name:"Samuel Okafor",role:"Project Manager \u00b7 Lagos",comment:"The security guidance is a useful reminder to protect sign-in details and check account activity regularly.",photo:"images/reviews/customer-06.jpg"},
-{rating:5,name:"Elena Petrova",role:"Independent Designer \u00b7 Sofia",comment:"A well-organised account guide helps me understand the documents and identity checks I may need to prepare.",photo:"images/reviews/customer-07.jpg"},
-{rating:5,name:"Marcus Reed",role:"Consultant \u00b7 Miami",comment:"I would want to compare transfer costs and currency conversion details before confirming a payment, and the guidance makes that clear.",photo:"images/reviews/customer-08.jpg"},
-{rating:5,name:"Leila Haddad",role:"Retail Business Owner \u00b7 Dubai",comment:"The business account information helps me review payment access and account features before speaking with the bank.",photo:"images/reviews/customer-09.jpg"},
-{rating:5,name:"Peter Mwangi",role:"Finance Officer \u00b7 Nairobi",comment:"The explanation of statements and transaction records highlights how important it is to keep clear financial records.",photo:"images/reviews/customer-10.jpg"},
-{rating:5,name:"Grace Thompson",role:"Property Manager \u00b7 Nassau",comment:"The savings overview encourages people to check the term, withdrawal conditions and fees before choosing an option.",photo:"images/reviews/customer-11.jpg"},
-{rating:5,name:"Andre Joseph",role:"Logistics Coordinator \u00b7 Castries",comment:"The international transfer steps are straightforward and remind customers to double-check banking details before sending money.",photo:"images/reviews/customer-12.jpg"},
-{rating:5,name:"Maya Chen",role:"Technology Founder \u00b7 Singapore",comment:"The account comparison is a helpful starting point for understanding which features to discuss with a relationship manager.",photo:"images/reviews/customer-13.jpg"},
-{rating:5,name:"David Laurent",role:"Trade Consultant \u00b7 Montreal",comment:"I like that the guidance stresses reviewing charges and keeping a payment reference for follow-up if needed.",photo:"images/reviews/customer-14.jpg"},
-{rating:5,name:"Isabella Costa",role:"Business Analyst \u00b7 Lisbon",comment:"The lending overview highlights the information that matters when comparing options, especially fees, repayment schedules and eligibility.",photo:"images/reviews/customer-15.jpg"}
+{rating:5,name:"Amara Bennett",role:"Small Business Owner · Nassau",comment:"The account overview makes it easier to compare business banking features and identify the questions I need answered before applying.",photo:"https://i.pravatar.cc/120?img=47"},
+{rating:5,name:"Daniel Clarke",role:"International Consultant · Toronto",comment:"The international payment checklist is useful for remembering to confirm the recipient, currency, fees and expected processing time.",photo:"https://i.pravatar.cc/120?img=12"},
+{rating:5,name:"Sofia Mensah",role:"Freelance Professional · Accra",comment:"I appreciate seeing savings terms, access conditions and fees explained together rather than focusing on a rate alone.",photo:"https://i.pravatar.cc/120?img=44"},
+{rating:5,name:"Michael Foster",role:"Operations Manager · London",comment:"The loan information points me toward the important details: eligibility, interest, fees and the total repayment amount.",photo:"https://i.pravatar.cc/120?img=13"},
+{rating:5,name:"Nadia Williams",role:"Import Business Director · Bridgetown",comment:"Clear information about multi-currency accounts is helpful when planning payments to suppliers in different countries.",photo:"https://i.pravatar.cc/120?img=49"},
+{rating:5,name:"Samuel Okafor",role:"Project Manager · Lagos",comment:"The security guidance is a useful reminder to protect sign-in details and check account activity regularly.",photo:"https://i.pravatar.cc/120?img=60"},
+{rating:5,name:"Elena Petrova",role:"Independent Designer · Sofia",comment:"A well-organised account guide helps me understand the documents and identity checks I may need to prepare.",photo:"https://i.pravatar.cc/120?img=45"},
+{rating:5,name:"Marcus Reed",role:"Consultant · Miami",comment:"I would want to compare transfer costs and currency conversion details before confirming a payment, and the guidance makes that clear.",photo:"https://i.pravatar.cc/120?img=14"},
+{rating:5,name:"Leila Haddad",role:"Retail Business Owner · Dubai",comment:"The business account information helps me review payment access and account features before speaking with the bank.",photo:"https://i.pravatar.cc/120?img=48"},
+{rating:5,name:"Peter Mwangi",role:"Finance Officer · Nairobi",comment:"The explanation of statements and transaction records highlights how important it is to keep clear financial records.",photo:"https://i.pravatar.cc/120?img=11"},
+{rating:5,name:"Grace Thompson",role:"Property Manager · Nassau",comment:"The savings overview encourages people to check the term, withdrawal conditions and fees before choosing an option.",photo:"https://i.pravatar.cc/120?img=46"},
+{rating:5,name:"Andre Joseph",role:"Logistics Coordinator · Castries",comment:"The international transfer steps are straightforward and remind customers to double-check banking details before sending money.",photo:"https://i.pravatar.cc/120?img=15"},
+{rating:5,name:"Maya Chen",role:"Technology Founder · Singapore",comment:"The account comparison is a helpful starting point for understanding which features to discuss with a relationship manager.",photo:"https://i.pravatar.cc/120?img=32"},
+{rating:5,name:"David Laurent",role:"Trade Consultant · Montreal",comment:"I like that the guidance stresses reviewing charges and keeping a payment reference for follow-up if needed.",photo:"https://i.pravatar.cc/120?img=16"},
+{rating:5,name:"Isabella Costa",role:"Business Analyst · Lisbon",comment:"The lending overview highlights the information that matters when comparing options, especially fees, repayment schedules and eligibility.",photo:"https://i.pravatar.cc/120?img=43"}
 ];
-function renderExampleReviews(){
- var mount=document.getElementById('reviewsMount'); if(!mount)return;
- var html='<div class="avg-rating-row"><div><div style="font-size:13px;color:var(--muted)">15 sample profiles</div></div></div><div class="review-grid">';
- exampleReviews.forEach(function(r,i){var n=String(i+1).padStart(2,'0');html+='<article class="review-card"><div class="review-person"><div class="review-photo-slot"><img class="review-avatar" src="'+r.photo+'" alt="Add customer photo '+n+'" onerror="this.style.display=\'none\';this.nextElementSibling.style.display=\'flex\'"><span class="review-photo-add" style="display:none">ADD PHOTO<br>'+n+'</span></div><div><div class="rname">'+r.name+'</div><div class="rdate">'+r.role+'</div></div></div><div class="stars">★★★★★</div><p>'+r.comment+'</p></article>';});
- html+='</div>';mount.innerHTML=html;
+
+function renderExampleReviews() {
+  var mount = document.getElementById('reviewsMount');
+  if (!mount) return;
+
+  var html =
+    '<div class="avg-rating-row">' +
+      '<div><div style="font-size:13px;color:var(--muted)">15 sample profiles</div></div>' +
+    '</div><div class="review-grid">';
+
+  exampleReviews.forEach(function(r, i) {
+    html +=
+      '<article class="review-card">' +
+        '<div class="review-person">' +
+          '<img class="review-avatar" src="' + r.photo +
+          '" alt="Sample profile portrait" loading="lazy" ' +
+          'onerror="this.onerror=null;this.src=\'images/reviews/customer-' +
+          String(i + 1).padStart(2, '0') + '.jpg\'">' +
+          '<div>' +
+            '<div class="rname">' + r.name + '</div>' +
+            '<div class="rdate">' + r.role + '</div>' +
+          '</div>' +
+        '</div>' +
+        '<div class="stars">★★★★★</div>' +
+        '<p>' + r.comment + '</p>' +
+      '</article>';
+  });
+
+  html += '</div>';
+  mount.innerHTML = html;
 }
 
 /* ---- Render approved reviews on homepage ---- */
-function renderReviews(){
-  var mount=document.getElementById('reviewsMount');
-  if(!mount) return;
-  var reviews=getReviews().filter(function(r){return r.status==='approved';});
-  if(reviews.length===0){ renderExampleReviews(); return; }
-  reviews.sort(function(a,b){
-    if(!!a.featured!==!!b.featured) return a.featured?-1:1;
-    return new Date(b.date)-new Date(a.date);
+function renderReviews() {
+  var mount = document.getElementById('reviewsMount');
+  if (!mount) return;
+
+  var reviews = getReviews().filter(function(r) {
+    return r.status === 'approved';
   });
-  var avg=reviews.reduce(function(s,r){return s+r.rating;},0)/reviews.length;
-  var html='<div class="avg-rating-row"><div class="avg-num">'+avg.toFixed(1)+'</div><div><div class="stars">'+starStr(Math.round(avg))+'</div><div style="font-size:13px;color:var(--muted)">'+reviews.length+' review'+(reviews.length===1?'':'s')+'</div></div></div><div class="review-grid">';
-  reviews.forEach(function(r){
-    html+='<div class="review-card">'+(r.featured?'<span class="featured-badge">Featured</span>':'')+
-      '<div class="review-person">'+(r.photo?'<img class="review-avatar" src="'+escapeHtml(r.photo)+'" alt="Profile of '+escapeHtml(r.name)+'">':'')+'<div><div class="rname">'+escapeHtml(r.name)+'</div><div class="rdate">'+new Date(r.date).toLocaleDateString()+'</div></div></div>'+
-      '<div class="stars">'+starStr(r.rating)+'</div>'+
-      '<div class="rdate">'+new Date(r.date).toLocaleDateString()+'</div>'+
-      '<p>'+escapeHtml(r.comment)+'</p></div>';
+
+  if (reviews.length === 0) {
+    renderExampleReviews();
+    return;
+  }
+
+  reviews.sort(function(a, b) {
+    if (!!a.featured !== !!b.featured) return a.featured ? -1 : 1;
+    return new Date(b.date) - new Date(a.date);
   });
-  html+='</div>';
-  mount.innerHTML=html;
+
+  var avg = reviews.reduce(function(s, r) {
+    return s + r.rating;
+  }, 0) / reviews.length;
+
+  var html =
+    '<div class="avg-rating-row">' +
+      '<div class="avg-num">' + avg.toFixed(1) + '</div>' +
+      '<div><div class="stars">' + starStr(Math.round(avg)) +
+      '</div><div style="font-size:13px;color:var(--muted)">' +
+      reviews.length + ' review' + (reviews.length === 1 ? '' : 's') +
+      '</div></div>' +
+    '</div><div class="review-grid">';
+
+  reviews.forEach(function(r) {
+    html +=
+      '<article class="review-card">' +
+        (r.featured ? '<span class="featured-badge">Featured</span>' : '') +
+        '<div class="review-person">' +
+          (r.photo
+            ? '<img class="review-avatar" src="' + escapeHtml(r.photo) +
+              '" alt="Profile of ' + escapeHtml(r.name) + '" loading="lazy">'
+            : '') +
+          '<div><div class="rname">' + escapeHtml(r.name) +
+          '</div><div class="rdate">' +
+          new Date(r.date).toLocaleDateString() + '</div></div>' +
+        '</div>' +
+        '<div class="stars">' + starStr(r.rating) + '</div>' +
+        '<p>' + escapeHtml(r.comment) + '</p>' +
+      '</article>';
+  });
+
+  html += '</div>';
+  mount.innerHTML = html;
 }
+
 
 (function(){
   var h=location.hash.replace('#','');
