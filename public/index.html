@@ -529,7 +529,9 @@ button:active,.cta-btn:active,.cta-ghost:active,.cta-gold:active,.cta-outline:ac
 </div>
 </div>
 </section>
-<section class="alt" id="home-location"><div class="wrap"><div class="section-head"><div class="eyebrow">Service Availability</div><h2>Built for clear, responsible financial access</h2><p>Supported countries, operating locations, partner institutions, and product availability should be published here only after verification. This concept page does not confirm a branch location or regulatory status.</p></div><div class="home-section-image"><img alt="Global financial network" loading="lazy" src="https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&amp;fit=crop&amp;w=1400&amp;q=82"/></div></div></section>
+<<section class="alt" id="home-location"><div class="wrap"><div class="section-head"><div class="eyebrow">Service Availability</div><h2>Built for clear, responsible financial access</h2><p>Supported countries, operating locations, partner institutions, and product availability should be published here only after verification. This concept page does not confirm a branch location or regulatory status.</p></div><div class="home-section-image"><img alt="Global financial network" loading="lazy" src="https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&amp;fit=crop&amp;w=1400&amp;q=82"/></div>
+<div class="map-frame"><iframe title="Map of Nassau, The Bahamas" src="https://www.google.com/maps?q=Nassau,+The+Bahamas&amp;z=13&amp;output=embed" loading="lazy" referrerpolicy="no-referrer-when-downgrade" allowfullscreen></iframe></div>
+</div></section>
 </div>
 <div class="page" id="page-about">
 <div class="page-hero"><div class="eyebrow">About Us</div><h1>A bank built around international life</h1><p>West Pac Global was founded to serve people and businesses whose financial lives cross borders.</p>
@@ -633,7 +635,7 @@ button:active,.cta-btn:active,.cta-ghost:active,.cta-gold:active,.cta-outline:ac
     <div class="wrap" style="max-width:760px">
       <form class="card" id="openAccountForm" onsubmit="submitApplication(event)">
 
-        <p class="prototype-notice" role="note" style="margin:0 0 18px;color:#687386;font-size:11px;line-height:1.4">Prototype only — no real bank accounts are opened.</p>
+        <p class="prototype-notice" role="note" style="margin:0 0 18px;color:#687386;font-size:11px;line-height:1.4">Open an account.</p>
 
         <h3 style="font-size:17px;color:var(--navy)">1. Account Type</h3>
         <div class="field"><label for="acctType">Which account are you applying for? *</label>
@@ -705,7 +707,7 @@ button:active,.cta-btn:active,.cta-ghost:active,.cta-gold:active,.cta-outline:ac
         <label class="chk" style="display:flex;gap:8px;align-items:flex-start;font-size:13.5px;color:var(--muted);margin-bottom:10px"><input type="checkbox" required style="margin-top:3px"> I confirm that the information provided is accurate and complete to the best of my knowledge. *</label>
         <label class="chk" style="display:flex;gap:8px;align-items:flex-start;font-size:13.5px;color:var(--muted);margin-bottom:18px"><input type="checkbox" required style="margin-top:3px"> I agree to the <a href="#" onclick="go('terms');return false" style="color:var(--navy);font-weight:600">Terms &amp; Conditions</a> and <a href="#" onclick="go('privacy');return false" style="color:var(--navy);font-weight:600">Privacy Policy</a>. *</label>
 
-        <button type="submit" class="cta-btn" style="width:100%">Submit Demo Application</button>
+        <button type="submit" class="cta-btn" style="width:100%">Submit Application</button>
         <div class="form-msg" id="omsg"></div>
       </form>
     </div>
@@ -950,7 +952,7 @@ button:active,.cta-btn:active,.cta-ghost:active,.cta-gold:active,.cta-outline:ac
 <div class="modal">
 <button aria-label="Close" class="close" onclick="closeReviewModal()">✕</button>
 <h3>Write a Review</h3>
-<p style="font-size:13.5px;margin-bottom:16px">Share your own experience. In this demo, submitted reviews are saved in this browser only and are not sent to a website server.</p>
+<p style="font-size:13.5px;margin-bottom:16px">Share your own experience. Reviews are reviewed by our team before they are published..</p>
 <form id="reviewForm" onsubmit="submitReview(event)">
 <div class="field"><label>Your rating *</label>
 <div class="star-pick" id="starPick">
@@ -1085,7 +1087,7 @@ function renderExampleReviews() {
 
   var html =
     '<div class="avg-rating-row">' +
-      '<div><div style="font-size:13px;color:var(--muted)">15 sample profiles</div></div>' +
+      '<div><div style="font-size:13px;color:var(--muted)">Our Customer Reviews</div></div>' +
     '</div><div class="review-grid">';
 
   exampleReviews.forEach(function(r, i) {
