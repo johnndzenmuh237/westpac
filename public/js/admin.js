@@ -4,6 +4,19 @@ if (!Session.token || Session.role !== 'admin') {
 
 let REF = { coins: {}, gasCoin: {}, networkFee: {} };
 let currentView = null;
+/* Worldwide ISO-style fiat currency choices. Existing account logic is preserved. */
+const WORLD_FIAT_CURRENCIES = [
+  'AED','AFN','ALL','AMD','ANG','AOA','ARS','AUD','AWG','AZN','BAM','BBD','BDT','BGN','BHD','BIF','BMD','BND','BOB','BRL','BSD','BTN','BWP','BYN','BZD',
+  'CAD','CDF','CHF','CLP','CNY','COP','CRC','CUP','CVE','CZK','DJF','DKK','DOP','DZD','EGP','ERN','ETB','EUR','FJD','FKP','GBP','GEL','GHS','GIP','GMD','GNF','GTQ','GYD',
+  'HKD','HNL','HTG','HUF','IDR','ILS','INR','IQD','IRR','ISK','JMD','JOD','JPY','KES','KGS','KHR','KMF','KPW','KRW','KWD','KYD','KZT','LAK','LBP','LKR','LRD','LSL','LYD',
+  'MAD','MDL','MGA','MKD','MMK','MNT','MOP','MRU','MUR','MVR','MWK','MXN','MYR','MZN','NAD','NGN','NIO','NOK','NPR','NZD','OMR','PAB','PEN','PGK','PHP','PKR','PLN','PYG','QAR',
+  'RON','RSD','RUB','RWF','SAR','SBD','SCR','SDG','SEK','SGD','SHP','SLE','SLL','SOS','SRD','SSP','STN','SVC','SYP','SZL','THB','TJS','TMT','TND','TOP','TRY','TTD','TWD','TZS',
+  'UAH','UGX','USD','UYU','UZS','VES','VND','VUV','WST','XAF','XCD','XOF','XPF','YER','ZAR','ZMW','ZWL'
+];
+function allFiatCurrencies(){
+  const existing = (REF && REF.options && Array.isArray(REF.options.fiatCurrencies)) ? REF.options.fiatCurrencies : [];
+  return [...new Set([...existing, ...WORLD_FIAT_CURRENCIES])].sort();
+}
 const COIN_COLORS = { BTC:'#f7931a', ETH:'#8296ee', USDT:'#26a17b', USDC:'#2775ca', BNB:'#f3ba2f', TRX:'#ff0013', SOL:'#9945ff', MATIC:'#8247e5' };
 const ICON_BASE = 'https://cdn.jsdelivr.net/gh/spothq/cryptocurrency-icons@0.18.1/svg/color';
 
@@ -171,7 +184,7 @@ function clientFormHTML(v, mode){
       <h3><i class="fa-solid fa-id-badge"></i> Account</h3>
       <div class="field"><label for="cf_accountType">Account type</label>${selectHTML('cf_accountType', o.accountTypes, v.accountType||'', 'Select account type…')}</div>
       <div class="field"><label>Preferred currencies <span class="muted" style="font-weight:500;">(choose at least one)</span></label>
-        <div class="group-label">Fiat</div><div class="chip-group">${chipsHTML(o.fiatCurrencies, picked)}</div>
+        <div class="group-label">Fiat</div><div class="chip-group">${chipsHTML(allFiatCurrencies(), picked)}</div>
         <div class="group-label">Digital</div><div class="chip-group">${chipsHTML(Object.keys(REF.coins), picked)}</div>
       </div>
     </div>
@@ -404,6 +417,7 @@ async function openManageUser(userId){
       <div class="role-tabs" style="margin-bottom:14px;">
         <div class="role-tab active" id="creditTab_usd" onclick="setCreditType('usd')">USD Balance</div>
         <div class="role-tab" id="creditTab_crypto" onclick="setCreditType('crypto')">Crypto Asset</div>
+        <div class="role-tab" id="creditTab_fiat" onclick="setCreditType('fiat')">Fiat Currency</div>
       </div>
 
       <div id="creditPane_usd">
@@ -411,6 +425,13 @@ async function openManageUser(userId){
         <button class="btn btn-primary btn-block btn-sm" onclick="creditUsd('${u.id}')">Credit USD (logged as a deposit)</button>
       </div>
 
+      <div id="creditPane_fiat" class="hidden">
+        <div class="field"><label>Currency assigned to this user</label><select id="fiatCreditCurrency">${(u.preferredCurrencies||[]).map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join('')}</select></div>
+        <div class="field"><label>Amount to add</label><input type="number" min="0.01" step="0.01" id="fiatCreditAmount" placeholder="e.g. 250.00"></div>
+        <div class="field"><label>Internal note</label><input id="fiatCreditNote" maxlength="240" placeholder="Reason for this account credit"></div>
+        <div class="hint" style="margin-bottom:10px;">Recorded as an administrator credit with a unique reference and timestamp. It does not represent a verified bank transfer.</div>
+        <button class="btn btn-primary btn-block btn-sm" onclick="creditFiat('${u.id}')">Credit Fiat Balance</button>
+      </div>
       <div id="creditPane_crypto" class="hidden">
         <div class="field" style="margin-bottom:10px;"><label>Coin</label><select id="creditCoin" onchange="refreshCreditNetworks()">${coinOptions}</select></div>
         <div class="field" style="margin-bottom:10px;"><label>Network</label><select id="creditNetwork"></select></div>
@@ -441,8 +462,10 @@ async function openManageUser(userId){
 function setCreditType(type){
   document.getElementById('creditTab_usd').classList.toggle('active', type==='usd');
   document.getElementById('creditTab_crypto').classList.toggle('active', type==='crypto');
+  if(document.getElementById('creditTab_fiat')) document.getElementById('creditTab_fiat').classList.toggle('active', type==='fiat');
   document.getElementById('creditPane_usd').classList.toggle('hidden', type!=='usd');
   document.getElementById('creditPane_crypto').classList.toggle('hidden', type!=='crypto');
+  if(document.getElementById('creditPane_fiat')) document.getElementById('creditPane_fiat').classList.toggle('hidden', type!=='fiat');
 }
 function refreshCreditNetworks(){
   const coin = document.getElementById('creditCoin').value;
@@ -467,6 +490,19 @@ async function creditUsd(userId){
     await openManageUser(userId);
   }catch(e){ toast(e.message,'err'); }
 }
+async function creditFiat(userId){
+  const currency = document.getElementById('fiatCreditCurrency')?.value;
+  const amount = Number(document.getElementById('fiatCreditAmount')?.value);
+  const description = document.getElementById('fiatCreditNote')?.value.trim() || 'Account balance adjustment by administrator';
+  if(!currency){ toast('Assign a currency to this user first','err'); return; }
+  if(!Number.isFinite(amount) || amount<=0){ toast('Enter a valid amount','err'); return; }
+  try{
+    const result = await api('/admin/fiat-credit', {method:'POST',body:{userId,currency,amount,description}});
+    toast(`Credited ${amount.toLocaleString()} ${currency} · ${result.reference}`,'ok');
+    await openManageUser(userId);
+  }catch(e){ toast(e.message,'err'); }
+}
+
 async function creditCrypto(userId){
   const coin = document.getElementById('creditCoin').value;
   const network = document.getElementById('creditNetwork').value;
@@ -514,7 +550,10 @@ async function resetPassword(userId){
 /* ---------------- Deposit Addresses (platform-wide, admin-configured) ---------------- */
 async function renderDepositAddresses(){
   const addresses = await api('/admin/deposit-addresses');
+  let receivingDetails = [];
+  try { receivingDetails = await api('/admin/fiat-receiving-details'); } catch(e) { /* older server: crypto deposits remain available */ }
   const coinOptions = Object.keys(REF.coins).map(c=>`<option value="${c}">${c} — ${REF.coins[c].name}</option>`).join('');
+  const fiatOptions = allFiatCurrencies().map(c=>`<option value="${c}">${c}</option>`).join('');
 
   document.getElementById('view-deposits').innerHTML = `
     <div class="card" style="max-width:560px;margin-bottom:20px;">
@@ -535,8 +574,55 @@ async function renderDepositAddresses(){
         `<button class="btn btn-danger btn-sm" onclick="deleteDepositAddress('${a._id}')">Remove</button>`
       ])) : '<div class="empty-state">No deposit addresses configured yet. Users will see "not yet configured" until you add one per coin/network.</div>'}
     </div>
+
+    <div class="card" style="margin-top:20px;">
+      <div class="card-title"><i class="fa-solid fa-building-columns"></i> Fiat Receiving Details</div>
+      <p class="muted" style="font-size:13px;margin-top:-8px;">Add bank details that you have actually received from your banking/payment provider. Users see details only for their selected currencies. Leave a currency unconfigured until real details are available.</p>
+      <div class="two-col">
+        <div class="field"><label>Currency</label><select id="frCurrency">${fiatOptions}</select></div>
+        <div class="field"><label>Bank / Provider name</label><input id="frBankName" placeholder="Bank or licensed provider"></div>
+        <div class="field"><label>Account holder name</label><input id="frAccountName" placeholder="Exact beneficiary name"></div>
+        <div class="field"><label>Account number</label><input id="frAccountNumber" placeholder="Provider-issued account number"></div>
+        <div class="field"><label>IBAN (if applicable)</label><input id="frIban" placeholder="IBAN"></div>
+        <div class="field"><label>SWIFT / BIC</label><input id="frSwift" placeholder="SWIFT / BIC"></div>
+        <div class="field"><label>Routing / sort / branch code</label><input id="frRouting" placeholder="Local bank code"></div>
+        <div class="field"><label>Bank address</label><input id="frBankAddress" placeholder="Branch / bank address"></div>
+      </div>
+      <div class="field"><label>Payment reference / instructions</label><input id="frInstructions" placeholder="Reference or transfer instructions (optional)"></div>
+      <button class="btn btn-primary" onclick="saveFiatReceivingDetails()"><i class="fa-solid fa-floppy-disk"></i> Save Currency Details</button>
+      <div style="margin-top:18px;">
+        ${receivingDetails.length ? dt([
+          {l:'Currency',w:'90px',cls:'first'},{l:'Bank / Provider',w:'minmax(0,1.4fr)'},{l:'Account holder',w:'minmax(0,1.4fr)'},{l:'Account number',w:'minmax(0,1.3fr)'},{l:'',w:'90px',cls:'act'}
+        ], receivingDetails.map(d=>[
+          `<span class="strong">${esc(d.currency)}</span>`,esc(d.bankName||''),esc(d.accountName||''),`<span class="mono">${esc(d.accountNumber||d.iban||'')}</span>`,
+          `<button class="btn btn-danger btn-sm" onclick="deleteFiatReceivingDetails('${esc(d.currency)}')">Remove</button>`
+        ])) : '<div class="empty-state">No fiat receiving details configured yet. Users will see “Pending setup” for their selected fiat currencies.</div>'}
+      </div>
+    </div>
   `;
   refreshDaNetworks();
+}
+async function saveFiatReceivingDetails(){
+  const data = {
+    currency: document.getElementById('frCurrency').value,
+    bankName: document.getElementById('frBankName').value.trim(),
+    accountName: document.getElementById('frAccountName').value.trim(),
+    accountNumber: document.getElementById('frAccountNumber').value.trim(),
+    iban: document.getElementById('frIban').value.trim(),
+    swift: document.getElementById('frSwift').value.trim(),
+    routing: document.getElementById('frRouting').value.trim(),
+    bankAddress: document.getElementById('frBankAddress').value.trim(),
+    instructions: document.getElementById('frInstructions').value.trim()
+  };
+  if(!data.currency || !data.bankName || !data.accountName || (!data.accountNumber && !data.iban)){
+    toast('Enter currency, provider, account holder and an account number or IBAN','err'); return;
+  }
+  try { await api('/admin/fiat-receiving-details', {method:'PUT', body:data}); toast('Fiat receiving details saved','ok'); await renderDepositAddresses(); }
+  catch(e){ toast(e.message,'err'); }
+}
+async function deleteFiatReceivingDetails(currency){
+  try { await api('/admin/fiat-receiving-details/'+encodeURIComponent(currency), {method:'DELETE'}); toast('Fiat details removed','ok'); await renderDepositAddresses(); }
+  catch(e){ toast(e.message,'err'); }
 }
 function refreshDaNetworks(){
   const coin = document.getElementById('daCoin').value;

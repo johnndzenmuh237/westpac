@@ -139,13 +139,37 @@ function normalizeTawk(input){
 }
 
 module.exports = function(app){
+/* Multi-currency account support: worldwide fiat catalogue and admin-configured receiving details. */
+const WORLD_FIAT_CURRENCIES = [
+  'AED','AFN','ALL','AMD','ANG','AOA','ARS','AUD','AWG','AZN','BAM','BBD','BDT','BGN','BHD','BIF','BMD','BND','BOB','BRL','BSD','BTN','BWP','BYN','BZD','CAD','CDF','CHF','CLP','CNY','COP','CRC','CUP','CVE','CZK','DJF','DKK','DOP','DZD','EGP','ERN','ETB','EUR','FJD','FKP','GBP','GEL','GHS','GIP','GMD','GNF','GTQ','GYD','HKD','HNL','HTG','HUF','IDR','ILS','INR','IQD','IRR','ISK','JMD','JOD','JPY','KES','KGS','KHR','KMF','KPW','KRW','KWD','KYD','KZT','LAK','LBP','LKR','LRD','LSL','LYD','MAD','MDL','MGA','MKD','MMK','MNT','MOP','MRU','MUR','MVR','MWK','MXN','MYR','MZN','NAD','NGN','NIO','NOK','NPR','NZD','OMR','PAB','PEN','PGK','PHP','PKR','PLN','PYG','QAR','RON','RSD','RUB','RWF','SAR','SBD','SCR','SDG','SEK','SGD','SHP','SLE','SLL','SOS','SRD','SSP','STN','SVC','SYP','SZL','THB','TJS','TMT','TND','TOP','TRY','TTD','TWD','TZS','UAH','UGX','USD','UYU','UZS','VES','VND','VUV','WST','XAF','XCD','XOF','XPF','YER','ZAR','ZMW','ZWL'
+];
+const FIAT_RECEIVING_FIELDS = ['bankName','accountName','accountNumber','iban','swift','routing','bankAddress','instructions'];
+try {
+  db.exec(`CREATE TABLE IF NOT EXISTS fiat_receiving_details (
+    currency TEXT PRIMARY KEY, bankName TEXT NOT NULL, accountName TEXT NOT NULL,
+    accountNumber TEXT, iban TEXT, swift TEXT, routing TEXT, bankAddress TEXT, instructions TEXT,
+    updatedAt INTEGER NOT NULL
+  )`);
+} catch(e) { console.error('Could not prepare fiat receiving details table:', e.message); }
+function listFiatReceivingDetails(){
+  return db.prepare('SELECT currency,bankName,accountName,accountNumber,iban,swift,routing,bankAddress,instructions,updatedAt FROM fiat_receiving_details ORDER BY currency').all()
+    .map(d=>({...d,status:(d.accountNumber||d.iban)?'configured':'pending'}));
+}
+function safeFiatReceivingBody(body){
+  const out = {};
+  for(const field of FIAT_RECEIVING_FIELDS) out[field] = String(body[field] == null ? '' : body[field]).trim().slice(0,300);
+  return out;
+}
   // Make every API response that contains a "coins" price list use live prices
   app.use('/api', (req, res, next) => {
     const orig = res.json.bind(res);
     res.json = (body) => {
       try{
         if(body && body.coins && typeof body.coins === 'object') applyLivePrices(body.coins);
-      }catch(e){ /* never break a response over prices */ }
+        if(body && body.options && Array.isArray(body.options.fiatCurrencies)) {
+          body.options.fiatCurrencies = [...new Set([...body.options.fiatCurrencies, ...WORLD_FIAT_CURRENCIES])].sort();
+        }
+      }catch(e){ /* never break a response over prices/currency choices */ }
       return orig(body);
     };
     next();
@@ -161,6 +185,106 @@ module.exports = function(app){
     if(url === null) return res.status(400).json({ error:'That does not look like a Tawk.to widget address. Use the link that looks like https://embed.tawk.to/PROPERTY_ID/WIDGET_ID' });
     setSetting('tawkUrl', url);
     res.json({ ok:true, url });
+  });
+
+  // ADMIN: configure genuine provider-issued fiat receiving details per currency.
+  app.get('/api/admin/fiat-receiving-details', requireAdmin, (req, res) => res.json(listFiatReceivingDetails()));
+  app.put('/api/admin/fiat-receiving-details', requireAdmin, (req, res) => {
+    const body = req.body || {};
+    const currency = String(body.currency || '').trim().toUpperCase();
+    if(!WORLD_FIAT_CURRENCIES.includes(currency)) return res.status(400).json({error:'Choose a supported fiat currency.'});
+    const data = safeFiatReceivingBody(body);
+    if(!data.bankName || !data.accountName || (!data.accountNumber && !data.iban))
+      return res.status(400).json({error:'Bank/provider, account holder and account number or IBAN are required.'});
+    db.prepare(`INSERT INTO fiat_receiving_details (currency,${FIAT_RECEIVING_FIELDS.join(',')},updatedAt)
+      VALUES (${['?'].concat(FIAT_RECEIVING_FIELDS.map(()=>'?')).concat('?').join(',')})
+      ON CONFLICT(currency) DO UPDATE SET ${FIAT_RECEIVING_FIELDS.map(f=>`${f}=excluded.${f}`).join(',')},updatedAt=excluded.updatedAt`)
+      .run(currency, ...FIAT_RECEIVING_FIELDS.map(f=>data[f]), Date.now());
+    res.json({ok:true,currency});
+  });
+  app.delete('/api/admin/fiat-receiving-details/:currency', requireAdmin, (req, res) => {
+    const currency = String(req.params.currency || '').trim().toUpperCase();
+    const result = db.prepare('DELETE FROM fiat_receiving_details WHERE currency=?').run(currency);
+    if(!result.changes) return res.status(404).json({error:'No receiving details configured for that currency.'});
+    res.json({ok:true});
+  });
+  // USER: return details only for currencies assigned to the authenticated user.
+  app.get('/api/user/fiat-receiving-details', requireUser, (req, res) => {
+    try {
+      const userId = req.user && (req.user.id || req.user.userId || req.user.sub);
+      if(!userId) return res.status(401).json({error:'Authentication required'});
+      const row = db.prepare('SELECT preferredCurrencies FROM users WHERE id=?').get(userId);
+      let currencies = [];
+      try { const parsed = JSON.parse((row && row.preferredCurrencies) || '[]'); currencies = Array.isArray(parsed) ? parsed : []; } catch(e) {}
+      const configured = listFiatReceivingDetails();
+      return res.json(currencies.filter(c=>WORLD_FIAT_CURRENCIES.includes(String(c).toUpperCase())).map(c=>{
+        const code = String(c).toUpperCase();
+        return configured.find(d=>d.currency===code) || {currency:code,status:'pending'};
+      }));
+    } catch(e) {
+      console.error('Could not load user fiat receiving details:',e.message);
+      return res.status(500).json({error:'Could not load receiving details'});
+    }
+  });
+
+  /* Multi-currency ledger. Admin credits are transparently labelled as admin credits, not bank-originated deposits. */
+  db.exec(`CREATE TABLE IF NOT EXISTS fiat_account_balances (
+    userId TEXT NOT NULL, currency TEXT NOT NULL, balance REAL NOT NULL DEFAULT 0,
+    updatedAt INTEGER NOT NULL, PRIMARY KEY(userId,currency)
+  );
+  CREATE TABLE IF NOT EXISTS fiat_account_transactions (
+    id TEXT PRIMARY KEY, userId TEXT NOT NULL, currency TEXT NOT NULL, amount REAL NOT NULL,
+    type TEXT NOT NULL, status TEXT NOT NULL, reference TEXT NOT NULL UNIQUE,
+    description TEXT, createdAt INTEGER NOT NULL, source TEXT NOT NULL DEFAULT 'admin'
+  );`);
+  const fiatFxCache = { at:0, rates:null };
+  async function getFiatFxRates(){
+    if(fiatFxCache.rates && Date.now()-fiatFxCache.at < 5*60*1000) return fiatFxCache.rates;
+    const r = await fetch('https://api.frankfurter.dev/v1/latest?base=USD');
+    if(!r.ok) throw new Error('FX provider unavailable');
+    const data = await r.json();
+    fiatFxCache.rates = { base:'USD', date:data.date, rates:{USD:1,...data.rates}, provider:'Frankfurter', fetchedAt:Date.now() };
+    fiatFxCache.at = Date.now();
+    return fiatFxCache.rates;
+  }
+  app.get('/api/public/fx-rates', async (req,res)=>{
+    try { res.json(await getFiatFxRates()); }
+    catch(e) { res.status(503).json({error:'Live fiat exchange rates are temporarily unavailable.'}); }
+  });
+  app.get('/api/user/fiat-balances', requireUser, (req,res)=>{
+    const userId = req.user && (req.user.id || req.user.userId || req.user.sub);
+    if(!userId) return res.status(401).json({error:'Authentication required'});
+    const rows = db.prepare('SELECT currency,balance,updatedAt FROM fiat_account_balances WHERE userId=? ORDER BY currency').all(String(userId));
+    res.json(rows);
+  });
+  app.get('/api/user/fiat-transactions', requireUser, (req,res)=>{
+    const userId = req.user && (req.user.id || req.user.userId || req.user.sub);
+    if(!userId) return res.status(401).json({error:'Authentication required'});
+    res.json(db.prepare('SELECT id,currency,amount,type,status,reference,description,createdAt,source FROM fiat_account_transactions WHERE userId=? ORDER BY createdAt DESC').all(String(userId)));
+  });
+  app.post('/api/admin/fiat-credit', requireAdmin, (req,res)=>{
+    const body = req.body || {};
+    const userId = String(body.userId || '').trim();
+    const currency = String(body.currency || '').trim().toUpperCase();
+    const amount = Number(body.amount);
+    const description = String(body.description || 'Account balance adjustment by administrator').trim().slice(0,240);
+    if(!userId || !WORLD_FIAT_CURRENCIES.includes(currency) || !Number.isFinite(amount) || amount<=0 || amount>1e12)
+      return res.status(400).json({error:'Enter a valid user, assigned currency and positive amount.'});
+    const user = db.prepare('SELECT id,preferredCurrencies FROM users WHERE id=?').get(userId);
+    if(!user) return res.status(404).json({error:'User not found.'});
+    let assigned=[]; try { const parsed=JSON.parse(user.preferredCurrencies||'[]'); assigned=Array.isArray(parsed)?parsed.map(x=>String(x).toUpperCase()):[]; } catch(e) {}
+    if(!assigned.includes(currency)) return res.status(400).json({error:'That currency is not assigned to this user. Assign it in user settings first.'});
+    const id = crypto.randomUUID();
+    const reference = 'WPG-' + Date.now().toString(36).toUpperCase() + '-' + crypto.randomBytes(3).toString('hex').toUpperCase();
+    const now = Date.now();
+    const run = db.transaction(()=>{
+      db.prepare(`INSERT INTO fiat_account_balances(userId,currency,balance,updatedAt) VALUES(?,?,?,?)
+        ON CONFLICT(userId,currency) DO UPDATE SET balance=balance+excluded.balance,updatedAt=excluded.updatedAt`).run(userId,currency,amount,now);
+      db.prepare(`INSERT INTO fiat_account_transactions(id,userId,currency,amount,type,status,reference,description,createdAt,source)
+        VALUES(?,?,?,?,?,?,?,?,?,'admin')`).run(id,userId,currency,amount,'admin_credit','confirmed',reference,description,now);
+    });
+    run();
+    res.json({ok:true,id,reference,currency,amount,status:'confirmed',createdAt:now,type:'admin_credit'});
   });
 
   // PUBLIC: website "Open an Account" form (no login needed)

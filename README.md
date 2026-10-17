@@ -1,14 +1,12 @@
 # Westpac Global — Online Banking Demo
 
-A self-contained **demo** online-banking platform: an administration console for opening
-and managing client accounts, and a client dashboard for balances, swaps, deposits and
-withdrawals. No real funds, no real blockchain, no real bank — everything is simulated.
+A self-contained **demo online-banking platform** with an administration console for managing client accounts and a client dashboard for balances, swaps, deposits, withdrawals and transaction history.
 
-**Stack:** Node.js + Express + SQLite (a local file). No database server, no cloud account,
-no IP whitelist. Internet is only used for live coin prices and logos; the app still works
-without it.
+**Important:** This is a demonstration platform. Unless the appropriate external integrations are implemented, it does not connect to a real bank, create real bank accounts, transfer real money or verify real blockchain transactions.
 
-## Run it
+**Stack:** Node.js + Express + SQLite (a local file). Internet access is used for live market prices and other configured external services. The application can operate without internet access, although live data may be unavailable.
+
+## Run It
 
 ```bash
 npm install
@@ -17,72 +15,191 @@ npm start
 
 | Who | Address |
 |---|---|
-| Public home page (marketing site) | http://localhost:4000 |
-| Clients — "Online Banking Login" (→ dashboard) | http://localhost:4000/login.html |
+| Public home page | http://localhost:4000 |
+| Clients — Online Banking Login | http://localhost:4000/login.html |
 | Administration console | http://localhost:4000/admin-login.html |
 
-The admin address is deliberately **not linked** from the client page. Default admin login:
-`admin` / `admin123` (change in `.env` — see `.env.example`; optional).
+The admin address is deliberately not linked from the client page.
 
-- Needs Node.js 18+ (22+ recommended)
-- The database is created automatically at `data/west-pec-global.db`
-- Reset everything: stop the server and delete the `data/` folder
-- Upgrading from an earlier build: your existing database is renamed and upgraded
-  automatically; nothing is lost
+Default demo admin login: `admin` / `admin123`, if configured. Change the credentials before making the application publicly accessible. See `.env.example` and the authentication configuration.
 
-## How accounts work
+- Requires Node.js 18+; Node.js 22+ recommended.
+- The database is created automatically at `data/west-pec-global.db`.
+- Back up the database before making changes or running migrations.
+- Resetting the application by deleting the `data/` folder permanently removes the stored database records.
+- When upgrading an earlier build, verify that the migration succeeds and that the existing database is preserved.
 
-- **Clients cannot sign themselves up or change their password.** The only way in is the
-  username and password issued when the administrator opens the account. If a client
-  forgets it, the administrator uses **Reset password** in Manage Users.
-- Clients can update their own **phone number**. Everything else on their account page
-  (legal name, address, ID, etc.) is read-only.
+## How Accounts Work
 
-## Opening a client account (admin → Create User)
+- Clients cannot sign themselves up or change their password unless this functionality is added.
+- The administrator creates accounts and issues the generated username and password.
+- If a client forgets their password, the administrator can use **Reset Password** in Manage Users.
+- Clients can update their phone number. Other account details, including legal name, address and identification information, are read-only unless configured otherwise.
 
-1. **Account** — account type (Personal / Joint / Business / Corporate) and preferred currencies
-2. **Personal details** — legal name, date of birth (18+), nationality, country of residence, address, city, postcode
-3. **Contact details** — email, phone
-4. **Identification** — ID type, ID number, country of issue
-5. **Financial & employment** — occupation, employer (optional), source of funds, expected deposit,
-   business registration number (required for Business / Corporate accounts)
-6. **Consent** — two required checkboxes: accuracy confirmation, and agreement to the
-   Terms & Conditions and Privacy Policy (both link to `/terms.html` and `/privacy.html`)
+## Opening a Client Account
 
-The time consent was recorded is stored with the account. A username and password are
-generated and shown once. Notes:
+From **Admin → Create User**, the administrator enters:
 
-- *Preferred currencies* and *expected deposit* are recorded information only — they don't
-  add funds or change which wallets exist. Fund an account with **Manage → Credit Balance**.
-- `/terms.html` and `/privacy.html` contain **sample wording** — replace it with your own.
+1. **Account:** account type (Personal, Joint, Business or Corporate) and preferred currencies.
+2. **Personal details:** legal name, date of birth, nationality, country of residence, address, city and postcode.
+3. **Contact details:** email and phone number.
+4. **Identification:** ID type, ID number and country of issue.
+5. **Financial and employment details:** occupation, employer where applicable, source of funds, expected deposit and business registration number for Business or Corporate accounts.
+6. **Consent:** accuracy confirmation and agreement to the Terms & Conditions and Privacy Policy.
 
-## Admin features
+The consent time is recorded with the account. A username and password are generated when the account is created.
 
-- **Manage Users**: view all client details, **Edit details** (same form as creation),
-  reset password, credit USD/crypto (logged as deposits), override balances
-- **Dashboard** button: opens that client's real dashboard in a new tab (an "Admin view"
-  banner is shown; your admin session is untouched)
-- **Withdrawal requests**: approve, or reject with a written reason — the client sees it on
-  their dashboard and the held funds (amount + network fee) are returned automatically
-- **Deposit addresses**: a demo wallet address per coin/network, shown to clients with a Copy button
-- **Support settings**: email + WhatsApp shown on the client's Support page
-- **Overview**: totals and live market prices for every coin
+Preferred currencies and expected deposits are account information only. Selecting a currency does not create a real bank account or add money to the user's balance.
 
-## Client features
+The `/terms.html` and `/privacy.html` pages contain sample wording and should be reviewed and replaced with appropriate policies.
 
-- Dashboard, wallet with coin logos, live market, portfolio chart
-- **Swap** any holding into USD **or any other coin/network** at the live rate (with estimate)
-- **Withdraw to bank** — USD only (swap crypto → USD first) · **Withdraw to crypto**
-- **Deposit** addresses with Copy · transaction history · rejection notices with the reason
-- Support (email / WhatsApp), KYC "Upgrade Now", Buy Crypto link
+## Multi-Currency Account Balances
 
-## Network fee rule (swaps and crypto withdrawals)
+The dashboard is designed to support multiple fiat currencies, including:
 
-The fee is paid in the network's gas coin from the same wallet. Without enough of it the
-action is blocked ("TRX needed before swapping can work").
+- USD — US Dollar
+- EUR — Euro
+- GBP — British Pound
+- XAF — Central African CFA Franc
+- INR — Indian Rupee
+- JPY — Japanese Yen
+- CNY — Chinese Yuan
+- PHP — Philippine Peso
+- AED — UAE Dirham
 
-| Network | Gas coin | Fee |
-|---|---|---|
+Additional currencies may be supported depending on the application's configuration.
+
+- The administrator can assign supported currencies to client accounts.
+- Each currency must maintain its own balance.
+- When a user is credited in a particular currency, that currency and amount should appear in the user's balance and transaction history.
+- A credit in one currency must not silently increase another currency's balance.
+- Where a live exchange-rate provider is configured, the dashboard can display an estimated converted value.
+- The original transaction amount and currency must remain visible even when a converted value is shown.
+- If live exchange rates are unavailable, the dashboard should show that the rate is unavailable rather than inventing a live price.
+
+Cryptocurrency balances and fiat balances must remain separate unless a conversion is explicitly recorded.
+
+## Fiat Receiving Details
+
+Where the receiving-details feature is installed, the administrator can configure receiving instructions for supported currencies.
+
+The details may include:
+
+- Currency
+- Bank or payment provider
+- Account holder name
+- Account number
+- IBAN, where applicable
+- SWIFT/BIC, where applicable
+- Routing number or sort code, where applicable
+- Bank address
+- Payment instructions
+
+Users can view the receiving details configured for their selected currencies.
+
+**Receiving details must be supplied by the legitimate bank or payment provider.** The application must not invent bank account numbers, IBANs, SWIFT codes or other banking details.
+
+If receiving details have not been configured for a currency, the dashboard should display a pending-setup message.
+
+Displaying receiving instructions does not mean a deposit has been received or confirmed.
+
+## Transaction History and Deposit Records
+
+The transaction history should provide a record of activity associated with each user account.
+
+Each transaction should display the applicable details:
+
+- Unique transaction reference
+- Transaction type
+- Amount and currency
+- Date and time
+- Transaction status
+- Description or payment reference
+- Relevant deposit, withdrawal or conversion details
+
+Supported transaction types may include:
+
+- Administrator credit
+- Deposit
+- Withdrawal
+- Currency conversion or crypto swap
+- Network fee
+- Refund or reversal, where supported
+
+Users should be able to open a transaction to view its details and a clean, printable receipt. The receipt should be suitable for saving as a PDF or taking a screenshot.
+
+Possible statuses include **Pending**, **Completed**, **Failed** and **Rejected**, depending on the transaction workflow.
+
+An administrator-issued credit must be identified as an administrator credit. It must not be described as a bank-confirmed deposit unless an actual deposit has been independently verified.
+
+A transaction receipt documents the record maintained by this application. It is not automatically proof of a bank transfer or payment.
+
+## Cryptocurrency Deposits
+
+The administration console can configure demo deposit addresses for supported cryptocurrencies and networks.
+
+Crypto transaction records should support the following information when available:
+
+- Cryptocurrency
+- Blockchain network
+- Receiving wallet address
+- Sender address, if available
+- Transaction hash (TXID)
+- Amount and currency
+- Network fee, where applicable
+- Date and time
+- Confirmation count
+- Required confirmation threshold
+- Transaction status
+
+A transaction hash entered by a user or administrator is not proof of payment by itself.
+
+For real blockchain verification, the application must connect to a suitable blockchain explorer API, node or verification provider. It must check the correct network, receiving address, asset, amount and confirmation count before marking a deposit as confirmed.
+
+If blockchain verification is not configured, the transaction must be identified as simulated or unverified.
+
+Demo wallet addresses must not be presented as wallets controlled by the platform unless that is actually the case.
+
+## Admin Features
+
+- **Manage Users:** view client details, edit details, reset passwords and manage account balances.
+- **Currency management:** assign supported currencies to users.
+- **Credit Balance:** record an administrator-issued credit with its amount, currency, reference, date and time, and status.
+- **Dashboard:** open a client's dashboard in a new tab, where supported. An Admin View banner identifies the administrative view.
+- **Withdrawal requests:** approve or reject requests with a written reason. Rejected withdrawals should release held funds according to the application's transaction logic.
+- **Deposit addresses:** configure supported cryptocurrency addresses by coin and network.
+- **Fiat receiving details:** configure legitimate receiving instructions for each supported currency.
+- **Support settings:** maintain the email address and WhatsApp contact shown to clients.
+- **Overview:** display platform totals and cryptocurrency market prices when the price service is available.
+
+The availability of each feature depends on the installed code and its configuration.
+
+## Client Features
+
+- Dashboard and wallet
+- Multiple fiat currency balances
+- Cryptocurrency holdings and logos
+- Live cryptocurrency market prices when available
+- Portfolio chart
+- Swaps between supported assets, with an estimate before confirmation
+- Bank withdrawal workflow for supported fiat balances
+- Crypto withdrawal workflow
+- Deposit addresses with copy controls
+- Transaction history and individual transaction receipts
+- Deposit and withdrawal status
+- Rejection notices with reasons
+- Support through email and WhatsApp
+- KYC Upgrade Now page
+- Buy Crypto link, where configured
+
+Actual availability depends on the installed application and its integrations.
+
+## Network Fee Rules
+
+The configured network fees for swaps and crypto withdrawals are defined in `utils/constants.js`.
+
+| Network | Gas coin | Configured demo fee |
+|---|---|---:|
 | ERC20 | ETH | 0.0025 |
 | BEP20 | BNB | 0.012 |
 | TRC20 | TRX | 6 |
@@ -90,30 +207,59 @@ action is blocked ("TRX needed before swapping can work").
 | MATIC | MATIC | 0.6 |
 | BTC (native) | — | 0 |
 
-Coins, networks and fees are defined in `utils/constants.js`.
+These are configured demo values, not guaranteed live network fees.
 
-## Money safety
+A real transaction integration should use suitable fee estimates and validate the selected network's requirements. Where applicable, the application should block a transaction if the relevant wallet lacks sufficient funds for the network fee.
 
-Every swap, withdrawal and rejection is one all-or-nothing database step, so balances can
-never end up half-updated.
+## Money and Transaction Safety
 
-## Project layout
+- Balance changes and their associated transaction records should be committed as one database transaction.
+- Failed operations should not leave balances partially updated.
+- Every transaction should have a unique reference.
+- Duplicate processing should be prevented where possible.
+- Pending, completed, failed and rejected transactions should be distinguishable.
+- Administrator balance changes should be auditable.
+- Transaction history should reflect the stored records.
+- Real bank and blockchain confirmation requires external verification. A database entry alone does not establish that funds were received.
+- Administrative and user API endpoints must enforce server-side authorization.
 
+## Project Layout
+
+```text
+server.js                  Express application
+config/db.js               SQLite setup and database migrations
+models/                    User, Transaction, DepositAddress,
+                           SupportSettings
+routes/                    Authentication, admin and user APIs
+utils/                     Coins, fees, option lists, validation,
+                           live price utilities
+public/index.html          Public home page
+public/login.html          Client login
+public/assets/             Home page images
+public/site-admin/         Public home page administration
+public/admin-login.html    Administration login
+public/*.html              Other site pages
+public/js/                 Client-side JavaScript
+public/css/                Stylesheets
+data/                      Automatically created database directory
 ```
-server.js           Express app
-config/db.js        SQLite setup + automatic upgrade of older database files
-models/             User, Transaction, DepositAddress, SupportSettings
-routes/             auth, admin, user APIs
-utils/              coins/fees/option lists, client-detail validation, live prices
-public/index.html   Public home page (About, Accounts, Open an Account, Security, Contact)
-public/login.html   Client "Online Banking Login" (every Log In button on the home page points here)
-public/assets/      Home page images
-public/site-admin/  Home page admin (open-account applications + reviews, browser localStorage, password admin123)
-public/admin-login.html   Administration login (separate design)
-public/*.html, js/, css/  the rest of the site
-data/               created automatically — your database file
-```
+
+The exact files and responsibilities may vary by build. Check the actual repository before replacing or renaming files.
+
+## Configuration and Security
+
+- Keep secrets and credentials in environment variables where supported.
+- Never commit `.env` files or private API keys to GitHub.
+- Change default administrator credentials.
+- Back up the database before migrations and resets.
+- Use HTTPS and secure session settings before exposing the application publicly.
+- Protect administrative endpoints with server-side authentication and authorization.
+- Validate all user-supplied amounts, currencies, addresses and transaction references on the server.
+- Use legitimate bank, payment-provider and blockchain integrations for real transaction verification.
 
 ## Disclaimer
 
-Demonstration only. It does not connect to any real exchange, blockchain or bank.
+Westpac Global is a demonstration project. Unless the appropriate integrations have been implemented and configured, it does not connect to a real bank, execute real fiat transfers or verify real blockchain deposits.
+
+Market prices and exchange rates may be delayed or unavailable. Simulated balances, administrator credits, transaction receipts and demo receiving instructions must not be represented as proof of real funds or confirmed payments.
+
