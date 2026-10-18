@@ -1,4 +1,3 @@
-
 const Session = {
   get token() {
     return this.impersonating
@@ -23,12 +22,10 @@ const Session = {
   },
 
   set(token, role, name) {
-    // Normal login belongs to this browser's persistent session.
     localStorage.setItem('cg_token', token);
     localStorage.setItem('cg_role', role);
     localStorage.setItem('cg_name', name || '');
 
-    // Remove any stale impersonation session in this tab.
     sessionStorage.removeItem('cg_token');
     sessionStorage.removeItem('cg_role');
     sessionStorage.removeItem('cg_name');
@@ -36,7 +33,6 @@ const Session = {
   },
 
   setImpersonation(token, name) {
-    // The user dashboard in this tab uses its own token.
     sessionStorage.setItem('cg_token', token);
     sessionStorage.setItem('cg_role', 'user');
     sessionStorage.setItem('cg_name', name || '');
@@ -57,6 +53,10 @@ const Session = {
     localStorage.removeItem('cg_name');
   }
 };
+
+// Only these core calls decide that the session is really invalid.
+// A 401 from an optional call (loans, KYC status, Tawk...) must not log the user out.
+const CORE_PATHS = ['/user/me', '/user/reference', '/admin/reference', '/admin/users'];
 
 async function api(path, { method = 'GET', body } = {}) {
   const headers = { 'Content-Type': 'application/json' };
@@ -81,7 +81,7 @@ async function api(path, { method = 'GET', body } = {}) {
   }
 
   if (!res.ok) {
-    if (res.status === 401) {
+    if (res.status === 401 && CORE_PATHS.includes(path.split('?')[0])) {
       const wasImpersonating = Session.impersonating;
       const wasRole = Session.role;
 
@@ -97,6 +97,7 @@ async function api(path, { method = 'GET', body } = {}) {
     );
 
     err.data = data;
+    err.status = res.status;
     throw err;
   }
 
