@@ -326,19 +326,31 @@ async function saveClientDetails(userId){
   }catch(e){ toast(e.message,'err'); }
 }
 
-// One click: opens that user's real dashboard in a new tab. The admin's own
-// login in this tab is untouched (the new tab gets its own private session).
+
 async function openUserDashboard(userId){
-  const tab = window.open('', '_blank'); // opened synchronously so popup blockers allow it
-  try{
-    const { token, name } = await api(`/admin/users/${userId}/impersonate`, { method:'POST' });
-    const url = `/user.html#imp=${encodeURIComponent(token)}&name=${encodeURIComponent(name)}`;
-    if(tab){ tab.location.href = url; } else { window.location.href = url; }
-  }catch(e){
-    if(tab) tab.close();
-    toast(e.message,'err');
+  // Open a separate tab and keep the admin dashboard in this tab.
+  const tab = window.open('about:blank', '_blank');
+
+  // Do not redirect the admin if the browser blocks the popup.
+  if (!tab) {
+    toast('Popup blocked. Allow popups for this site, then try again.', 'err');
+    return;
+  }
+
+  try {
+    const { token, name } = await api(
+      `/admin/users/${userId}/impersonate`,
+      { method: 'POST' }
+    );
+
+    const url = `/user.html#imp=${encodeURIComponent(token)}&name=${encodeURIComponent(name || '')}`;
+    tab.location.href = url;
+  } catch (e) {
+    tab.close();
+    toast(e.message, 'err');
   }
 }
+
 
 async function renderUsers(){
   const users = await api('/admin/users');

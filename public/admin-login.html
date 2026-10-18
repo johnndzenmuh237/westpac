@@ -29,7 +29,13 @@
 </div>
 <script src="/js/api.js"></script>
 <script>
-if (Session.token && Session.role === 'admin') window.location.href = '/admin.html';
+if (
+  !Session.impersonating &&
+  Session.token &&
+  Session.role === 'admin'
+) {
+  window.location.href = '/admin.html';
+}
 
 function toast(msg, type){
   const wrap = document.getElementById('toastWrap');
