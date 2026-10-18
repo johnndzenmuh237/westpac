@@ -23,6 +23,7 @@ app.use(cors());
 app.use(express.json());
 require('./server-routes')(app);
 require('./loans-kyc-routes')(app);
+require('./cards-upgrade-routes')(app);
 
 app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminRoutes);

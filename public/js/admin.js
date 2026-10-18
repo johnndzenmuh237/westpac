@@ -17,6 +17,20 @@ function allFiatCurrencies(){
   const existing = (REF && REF.options && Array.isArray(REF.options.fiatCurrencies)) ? REF.options.fiatCurrencies : [];
   return [...new Set([...existing, ...WORLD_FIAT_CURRENCIES])].sort();
 }
+function localCurrencyForCountry(country){
+  const c=String(country||'').trim().toLowerCase();
+  const m={
+    'cameroon':'XAF','india':'INR','united states':'USD','united states of america':'USD','usa':'USD','australia':'AUD','canada':'CAD','united kingdom':'GBP','great britain':'GBP',
+    'france':'EUR','germany':'EUR','italy':'EUR','spain':'EUR','portugal':'EUR','netherlands':'EUR','belgium':'EUR','ireland':'EUR','austria':'EUR','finland':'EUR','greece':'EUR','luxembourg':'EUR','cyprus':'EUR','estonia':'EUR','latvia':'EUR','lithuania':'EUR','malta':'EUR','slovakia':'EUR','slovenia':'EUR','croatia':'EUR',
+    'nigeria':'NGN','ghana':'GHS','south africa':'ZAR','kenya':'KES','uganda':'UGX','tanzania':'TZS','rwanda':'RWF','senegal':'XOF','ivory coast':'XOF',"cote d'ivoire":'XOF','benin':'XOF','togo':'XOF','burkina faso':'XOF','mali':'XOF','niger':'XOF','gabon':'XAF','chad':'XAF','central african republic':'XAF','equatorial guinea':'XAF','republic of the congo':'XAF','democratic republic of the congo':'CDF','zambia':'ZMW','zimbabwe':'ZWL','botswana':'BWP','namibia':'NAD','mozambique':'MZN','angola':'AOA','ethiopia':'ETB','egypt':'EGP','morocco':'MAD','algeria':'DZD','tunisia':'TND',
+    'china':'CNY','japan':'JPY','south korea':'KRW','singapore':'SGD','hong kong':'HKD','new zealand':'NZD','switzerland':'CHF','sweden':'SEK','norway':'NOK','denmark':'DKK','poland':'PLN','czech republic':'CZK','czechia':'CZK','hungary':'HUF','romania':'RON','bulgaria':'BGN','turkey':'TRY','russia':'RUB','brazil':'BRL','mexico':'MXN','argentina':'ARS','chile':'CLP','colombia':'COP','peru':'PEN','uruguay':'UYU','venezuela':'VES','saudi arabia':'SAR','united arab emirates':'AED','qatar':'QAR','kuwait':'KWD','israel':'ILS','thailand':'THB','indonesia':'IDR','malaysia':'MYR','philippines':'PHP','pakistan':'PKR','bangladesh':'BDT','sri lanka':'LKR','nepal':'NPR','vietnam':'VND'
+  };
+  return m[c] || 'USD';
+}
+function defaultCurrenciesForCountry(country){ return [...new Set(['USD','AUD','CAD','EUR',localCurrencyForCountry(country)])]; }
+function countryInputHTML(id,value){
+  return `<div class="field"><label for="${id}">${id==='cf_residenceCountry'?'Country of residence':id==='cf_nationality'?'Nationality':'Country of issue'}</label><input id="${id}" list="${id}_list" value="${String(value||'').replace(/&/g,'&amp;').replace(/"/g,'&quot;')}" placeholder="Type to search countries…" autocomplete="off"><datalist id="${id}_list">${COUNTRIES.map(c=>`<option value="${String(c).replace(/&/g,'&amp;').replace(/"/g,'&quot;')}"></option>`).join('')}</datalist></div>`;
+}
 const COIN_COLORS = { BTC:'#f7931a', ETH:'#8296ee', USDT:'#26a17b', USDC:'#2775ca', BNB:'#f3ba2f', TRX:'#ff0013', SOL:'#9945ff', MATIC:'#8247e5' };
 const ICON_BASE = 'https://cdn.jsdelivr.net/gh/spothq/cryptocurrency-icons@0.18.1/svg/color';
 
@@ -43,6 +57,9 @@ function fmtCoin(n){ n=Number(n)||0; return (Math.round(n*1e6)/1e6).toString(); 
 function fmtDate(ts){ const d=new Date(ts); return d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})+' · '+d.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'}); }
 function shortAddr(a){ if(!a) return ''; return a.length>18 ? a.slice(0,8)+'…'+a.slice(-6) : a; }
 function txTypeLabel(t){
+  if(t.currency && t.type==='admin_credit') return 'Fiat account credit';
+  if(t.currency && t.type==='admin_debit') return 'Fiat account debit';
+  if(t.currency && t.type==='fiat_swap') return 'Fiat currency swap';
   if(t.type==='credit') return t.coin ? 'Deposit' : 'Deposit (USD)';
   if(t.type==='withdraw_bank') return 'Withdraw to Bank';
   if(t.type==='withdraw_crypto') return 'Withdraw to Crypto';
@@ -50,6 +67,7 @@ function txTypeLabel(t){
   return t.type;
 }
 function txAmountLabel(t){
+  if(t.currency){ const n=Number(t.amount)||0; return (n>0?'+':n<0?'−':'')+Math.abs(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:8})+' '+t.currency; }
   if(t.type==='withdraw_bank') return fmtUSD(t.usdAmount);
   if(t.type==='withdraw_crypto') return fmtCoin(t.amount)+' '+t.coin+' ('+t.network+')';
   if(t.type==='swap') return t.toCoin
@@ -112,10 +130,13 @@ async function refreshBadge(){
 
 async function renderOverview(){
   REF = await api('/admin/reference');
-  const [users, allTx] = await Promise.all([api('/admin/users'), api('/admin/transactions')]);
+  const [users, regularTx, fiatTx] = await Promise.all([
+    api('/admin/users'), api('/admin/transactions'), api('/admin/fiat-transactions').catch(()=>[])
+  ]);
+  const allTx=[...regularTx,...fiatTx].sort((a,b)=>(Number(b.createdAt)||0)-(Number(a.createdAt)||0));
   const totalUSD = users.reduce((a,u)=>a+u.usdBalance,0);
   const totalCrypto = users.reduce((a,u)=>a+Object.values(u.holdings).reduce((s,h)=>s+h.balance*(REF.coins[h.coin]?.price||0),0),0);
-  const pending = allTx.filter(t=>t.status==='pending').length;
+  const pending = regularTx.filter(t=>t.status==='pending').length;
   const feed = allTx.slice(0,10);
 
   const marketHtml = Object.keys(REF.coins).map(c=>{
@@ -177,7 +198,7 @@ function chipsHTML(list, selected){
 
 function clientFormHTML(v, mode){
   const o = REF.options;
-  const picked = v.preferredCurrencies || [];
+  const picked = (v.preferredCurrencies && v.preferredCurrencies.length) ? v.preferredCurrencies : (mode==='create' ? ['USD','AUD','CAD','EUR'] : []);
   const isBiz = (o.businessAccountTypes||[]).includes(v.accountType);
   return `
     <div class="form-section">
@@ -194,8 +215,8 @@ function clientFormHTML(v, mode){
       <div class="two-col">
         ${inputHTML('cf_legalName','Legal name (as on ID)', v.name, { placeholder:'e.g. Winifred Anne Eagle' })}
         ${inputHTML('cf_dateOfBirth','Date of birth', v.dateOfBirth, { type:'date' })}
-        <div class="field"><label for="cf_nationality">Nationality</label>${selectHTML('cf_nationality', COUNTRIES, v.nationality||'', 'Select…')}</div>
-        <div class="field"><label for="cf_residenceCountry">Country of residence</label>${selectHTML('cf_residenceCountry', COUNTRIES, v.country||'', 'Select…')}</div>
+        ${countryInputHTML('cf_nationality',v.nationality||'')}
+        ${countryInputHTML('cf_residenceCountry',v.country||'')}
       </div>
       ${inputHTML('cf_address','Residential address', v.address, { placeholder:'Street address' })}
       <div class="two-col">
@@ -217,7 +238,7 @@ function clientFormHTML(v, mode){
       <div class="three-col">
         <div class="field"><label for="cf_idType">ID type</label>${selectHTML('cf_idType', o.idTypes, v.idType||'', 'Select…')}</div>
         ${inputHTML('cf_idNumber','ID number', v.idNumber)}
-        <div class="field"><label for="cf_idCountry">Country of issue</label>${selectHTML('cf_idCountry', COUNTRIES, v.idCountry||'', 'Select…')}</div>
+        ${countryInputHTML('cf_idCountry',v.idCountry||'')}
       </div>
     </div>
 
@@ -248,6 +269,13 @@ function onAccountTypeChange(){
 }
 function wireClientForm(){
   document.getElementById('cf_accountType').addEventListener('change', onAccountTypeChange);
+  const country=document.getElementById('cf_residenceCountry');
+  if(country) country.addEventListener('change',()=>{
+    for(const code of defaultCurrenciesForCountry(country.value)){
+      const box=[...document.querySelectorAll('input[name="cf_currency"]')].find(x=>x.value===code);
+      if(box) box.checked=true;
+    }
+  });
 }
 function collectClientForm(mode){
   const val = (id)=>document.getElementById(id).value.trim();
@@ -282,8 +310,12 @@ function renderCreateUser(){
 }
 async function createUser(){
   const data = collectClientForm('create');
+  data.preferredCurrencies=[...new Set([...data.preferredCurrencies,...defaultCurrenciesForCountry(data.residenceCountry)])];
   try{
-    const { credentials } = await api('/admin/users', { method:'POST', body:data });
+    const created = await api('/admin/users', { method:'POST', body:data });
+    const credentials = created.credentials;
+    const newUserId = created.user?.id || created.id || created.user?._id;
+    if(newUserId) { try { await api('/admin/fiat-ensure-user',{method:'POST',body:{userId:newUserId}}); } catch(e) { /* defaults are already submitted with the account form */ } }
     openModal(`
       <h3><i class="fa-solid fa-circle-check" style="color:var(--green);"></i> Account Opened</h3>
       <p class="muted" style="font-size:13.5px;">Give these sign-in details to <b>${data.legalName}</b>. The password is only ever shown once — it is not stored in readable form.</p>
@@ -326,31 +358,19 @@ async function saveClientDetails(userId){
   }catch(e){ toast(e.message,'err'); }
 }
 
-
+// One click: opens that user's real dashboard in a new tab. The admin's own
+// login in this tab is untouched (the new tab gets its own private session).
 async function openUserDashboard(userId){
-  // Open a separate tab and keep the admin dashboard in this tab.
-  const tab = window.open('about:blank', '_blank');
-
-  // Do not redirect the admin if the browser blocks the popup.
-  if (!tab) {
-    toast('Popup blocked. Allow popups for this site, then try again.', 'err');
-    return;
-  }
-
-  try {
-    const { token, name } = await api(
-      `/admin/users/${userId}/impersonate`,
-      { method: 'POST' }
-    );
-
-    const url = `/user.html#imp=${encodeURIComponent(token)}&name=${encodeURIComponent(name || '')}`;
-    tab.location.href = url;
-  } catch (e) {
-    tab.close();
-    toast(e.message, 'err');
+  const tab = window.open('', '_blank'); // opened synchronously so popup blockers allow it
+  try{
+    const { token, name } = await api(`/admin/users/${userId}/impersonate`, { method:'POST' });
+    const url = `/user.html#imp=${encodeURIComponent(token)}&name=${encodeURIComponent(name)}`;
+    if(tab){ tab.location.href = url; } else { window.location.href = url; }
+  }catch(e){
+    if(tab) tab.close();
+    toast(e.message,'err');
   }
 }
-
 
 async function renderUsers(){
   const users = await api('/admin/users');
@@ -438,11 +458,15 @@ async function openManageUser(userId){
       </div>
 
       <div id="creditPane_fiat" class="hidden">
-        <div class="field"><label>Currency assigned to this user</label><select id="fiatCreditCurrency">${(u.preferredCurrencies||[]).map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join('')}</select></div>
+        <div class="field"><label>Currency assigned to this user</label><select id="fiatCreditCurrency">${allFiatCurrencies().filter(c=>(u.preferredCurrencies||[]).includes(c)).map(c=>`<option value="${esc(c)}">${esc(c)}</option>`).join('')}</select></div>
         <div class="field"><label>Amount to add</label><input type="number" min="0.01" step="0.01" id="fiatCreditAmount" placeholder="e.g. 250.00"></div>
         <div class="field"><label>Internal note</label><input id="fiatCreditNote" maxlength="240" placeholder="Reason for this account credit"></div>
         <div class="hint" style="margin-bottom:10px;">Recorded as an administrator credit with a unique reference and timestamp. It does not represent a verified bank transfer.</div>
-        <button class="btn btn-primary btn-block btn-sm" onclick="creditFiat('${u.id}')">Credit Fiat Balance</button>
+        <button class="btn btn-primary btn-block btn-sm" onclick="creditFiat('${u.id}')"><i class="fa-solid fa-plus"></i> Credit Fiat Balance</button>
+        <div class="divider" style="margin:14px 0;"></div>
+        <div class="field"><label>Amount to deduct</label><input type="number" min="0.01" step="0.01" id="fiatDebitAmount" placeholder="e.g. 50.00"></div>
+        <div class="field"><label>Debit note</label><input id="fiatDebitNote" maxlength="240" placeholder="Reason for this account debit"></div>
+        <button class="btn btn-outline btn-block btn-sm" onclick="debitFiat('${u.id}')"><i class="fa-solid fa-minus"></i> Debit Fiat Balance</button>
       </div>
       <div id="creditPane_crypto" class="hidden">
         <div class="field" style="margin-bottom:10px;"><label>Coin</label><select id="creditCoin" onchange="refreshCreditNetworks()">${coinOptions}</select></div>
@@ -513,6 +537,16 @@ async function creditFiat(userId){
     toast(`Credited ${amount.toLocaleString()} ${currency} · ${result.reference}`,'ok');
     await openManageUser(userId);
   }catch(e){ toast(e.message,'err'); }
+}
+
+async function debitFiat(userId){
+  const currency=document.getElementById('fiatCreditCurrency')?.value;
+  const amount=Number(document.getElementById('fiatDebitAmount')?.value);
+  const description=document.getElementById('fiatDebitNote')?.value.trim()||'Account balance adjustment by administrator';
+  if(!currency){toast('Assign a currency to this user first','err');return;}
+  if(!Number.isFinite(amount)||amount<=0){toast('Enter a valid debit amount','err');return;}
+  try{const result=await api('/admin/fiat-debit',{method:'POST',body:{userId,currency,amount,description}});toast(`Debited ${amount.toLocaleString()} ${currency} · ${result.reference}`,'ok');await openManageUser(userId);}
+  catch(e){toast(e.message,'err');}
 }
 
 async function creditCrypto(userId){
