@@ -27,12 +27,16 @@
     var m = r === 0 ? P / n : P * r / (1 - Math.pow(1 + r, -n));
     return { monthly:m, total:m * n, interest:m * n - P };
   }
+
+  var LOAN_CACHE = {};
   function loanItem(l){
+    LOAN_CACHE[l.id] = l;
     var status;
     if(l.status === 'approved'){
       status = '<div class="reject-banner" style="'+OK_STYLE+'margin-top:10px;"><i class="fa-solid fa-circle-check"></i> <b>Congratulations!</b> Your loan application has been approved.</div>';
     } else if(l.status === 'declined'){
-      status = '<div class="reject-banner" style="margin-top:10px;"><b>Declined:</b> '+esc(l.adminMessage||'No reason was given.')+'</div>';
+      status = '<div class="reject-banner" style="'+BAD_STYLE+'margin-top:10px;font-weight:600;"><i class="fa-solid fa-circle-xmark"></i> <b>Declined:</b> '+esc(l.adminMessage||'No reason was given.')+'</div>' +
+        '<button class="btn btn-primary btn-sm" style="margin-top:10px;" onclick="loanReapply(\''+esc(l.id)+'\')"><i class="fa-solid fa-rotate-right"></i> Apply Again</button>';
     } else {
       status = '<div style="margin-top:10px;"><span class="pill pill-amber"><i class="fa-solid fa-clock"></i> Under review</span></div>';
     }
@@ -43,6 +47,29 @@
       '<div class="muted" style="font-size:12.5px;">'+fmtDate(l.createdAt)+'</div></div>' +
       '<div class="muted" style="font-size:13px;margin-top:4px;">'+esc(l.purpose)+'</div>' + extra + status + '</div>';
   }
+
+  // "Apply Again": opens the Loans page with the declined application's details filled in
+  window.loanReapply = async function(id){
+    var l = LOAN_CACHE[id];
+    await nav('loans');
+    if(!l) return;
+    var t = LT.types.find(function(x){ return x.name === l.loanType; });
+    if(t){
+      document.getElementById('loanType').value = t.id;
+      loanTypeChanged();
+    }
+    var set = function(elId, v){ var el = document.getElementById(elId); if(el && v != null) el.value = v; };
+    set('loanAmount', l.amount);
+    set('loanTerm', String(l.termMonths));
+    set('loanPurpose', l.purpose);
+    set('loanEmployment', l.employment);
+    set('loanIncome', l.monthlyIncome);
+    loanRecalc();
+    var form = document.getElementById('loanType');
+    if(form) form.scrollIntoView({ behavior:'smooth', block:'center' });
+    toast('Your previous details are filled in. Adjust them and submit again.','ok');
+  };
+
   function termLabel(m){ return m >= 12 && m % 12 === 0 ? (m/12)+(m===12?' year':' years')+' ('+m+' months)' : m+' months'; }
 
   window.renderLoans = async function(){
@@ -243,7 +270,7 @@
     try{ loans = await api('/user/loans'); }catch(e){ console.error('Loans load failed', e); }
     try{ kyc = (await api('/user/kyc/status')).request; }catch(e){}
 
-    // Every application with its status: under review, approved (green tick) or declined (with reason)
+    // Every application with its status: under review, approved (green tick) or declined (red reason + Apply Again)
     if(loans.length){
       html += '<div class="card" style="margin-bottom:18px;"><div class="card-title"><i class="fa-solid fa-hand-holding-dollar"></i> My Loan Applications ' +
         '<a href="#" onclick="nav(\'loans\');return false;" style="margin-left:auto;font-size:12.5px;">View all</a></div>' +
