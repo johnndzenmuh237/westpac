@@ -7,9 +7,8 @@
    - Live crypto prices applied to any API response that contains a "coins" object
    Optional: set ANTHROPIC_API_KEY in your host's Environment settings for AI answers. */
 const crypto = require('crypto');
-const { db, transaction } = require('./config/db');
+const { db } = require('./config/db');
 const { requireUser, requireAdmin } = require('./middleware/auth');
-const jwt = require('jsonwebtoken');
 
 const SITE_NAME = 'Westpac Global'; // change here if you rename the platform
 
@@ -139,55 +138,7 @@ function normalizeTawk(input){
   return m ? `https://embed.tawk.to/${m[1]}/${m[2]}` : null;
 }
 
-function authUserId(req){
-  const u = req.auth || req.user || {};
-  return String(u.id || u.userId || u.sub || u._id || req.userId || '').trim();
-}
-function parseAssignedCurrencies(raw){
-  try { const a=JSON.parse(raw||'[]'); return Array.isArray(a) ? [...new Set(a.map(x=>String(x).trim().toUpperCase()).filter(x=>/^[A-Z]{3}$/.test(x))) ] : []; }
-  catch(e){ return []; }
-}
-function currencyDefaults(country){
-  const key=String(country||'').trim().toLowerCase();
-  const map={
-    'cameroon':'XAF','india':'INR','united states':'USD','united states of america':'USD','usa':'USD',
-    'australia':'AUD','canada':'CAD','united kingdom':'GBP','uk':'GBP','great britain':'GBP',
-    'eurozone':'EUR','france':'EUR','germany':'EUR','italy':'EUR','spain':'EUR','portugal':'EUR','netherlands':'EUR','belgium':'EUR','ireland':'EUR','austria':'EUR','finland':'EUR','greece':'EUR',
-    'nigeria':'NGN','ghana':'GHS','south africa':'ZAR','kenya':'KES','uganda':'UGX','tanzania':'TZS','rwanda':'RWF','senegal':'XOF','ivory coast':'XOF','cote d\'ivoire':'XOF','benin':'XOF','togo':'XOF','burkina faso':'XOF','mali':'XOF','niger':'XOF','guinea-bissau':'XOF',
-    'china':'CNY','japan':'JPY','south korea':'KRW','singapore':'SGD','hong kong':'HKD','new zealand':'NZD','switzerland':'CHF','sweden':'SEK','norway':'NOK','denmark':'DKK','poland':'PLN','czechia':'CZK','czech republic':'CZK','hungary':'HUF','romania':'RON','bulgaria':'BGN','turkey':'TRY','russia':'RUB',
-    'brazil':'BRL','mexico':'MXN','argentina':'ARS','chile':'CLP','colombia':'COP','peru':'PEN','uruguay':'UYU','venezuela':'VES','saudi arabia':'SAR','united arab emirates':'AED','uae':'AED','qatar':'QAR','kuwait':'KWD','israel':'ILS','thailand':'THB','indonesia':'IDR','malaysia':'MYR','philippines':'PHP','pakistan':'PKR','bangladesh':'BDT','sri lanka':'LKR','nepal':'NPR','vietnam':'VND','egypt':'EGP','morocco':'MAD','algeria':'DZD','tunisia':'TND','ethiopia':'ETB','zambia':'ZMW','zimbabwe':'ZWL','botswana':'BWP','namibia':'NAD','mozambique':'MZN','angola':'AOA','democratic republic of the congo':'CDF','congo':'XAF','gabon':'XAF','central african republic':'XAF','chad':'XAF','equatorial guinea':'XAF'
-  };
-  return map[key] || 'USD';
-}
-function newFiatReference(){ return 'WPG-'+Date.now().toString(36).toUpperCase()+'-'+crypto.randomBytes(3).toString('hex').toUpperCase(); }
-function getFiatBalance(userId,currency){
-  if(currency==='USD') { const u=db.prepare('SELECT usdBalance FROM users WHERE id=?').get(userId); return u ? Number(u.usdBalance)||0 : 0; }
-  const r=db.prepare('SELECT balance FROM fiat_account_balances WHERE userId=? AND currency=?').get(userId,currency); return r ? Number(r.balance)||0 : 0;
-}
-function changeFiatBalance(userId,currency,delta,now){
-  if(currency==='USD') { db.prepare('UPDATE users SET usdBalance=ROUND(usdBalance+?,8) WHERE id=?').run(delta,userId); return getFiatBalance(userId,currency); }
-  db.prepare(`INSERT INTO fiat_account_balances(userId,currency,balance,updatedAt) VALUES(?,?,?,?)
-    ON CONFLICT(userId,currency) DO UPDATE SET balance=ROUND(balance+excluded.balance,8),updatedAt=excluded.updatedAt`).run(userId,currency,delta,now);
-  return getFiatBalance(userId,currency);
-}
-function recordFiatTx(userId,currency,amount,type,description,source,now){
-  const id=crypto.randomUUID(), reference=newFiatReference();
-  db.prepare(`INSERT INTO fiat_account_transactions(id,userId,currency,amount,type,status,reference,description,createdAt,source)
-    VALUES(?,?,?,?,?,'confirmed',?,?,?,?)`).run(id,userId,currency,amount,type,reference,description||'',now,source||'admin');
-  return {id,reference};
-}
-
 module.exports = function(app){
-  // Admin-only, short-lived user-dashboard preview. Does not change the admin's own session.
-  app.post('/api/admin/users/:id/impersonate', requireAdmin, (req,res)=>{
-    try {
-      const user = db.prepare('SELECT id,name,username FROM users WHERE id=?').get(String(req.params.id||''));
-      if(!user) return res.status(404).json({error:'User not found'});
-      const token = jwt.sign({id:user.id,userId:user.id,role:'user',impersonatingAdmin:true}, process.env.JWT_SECRET, {expiresIn:'20m'});
-      res.json({token,name:user.name,username:user.username,expiresIn:1200});
-    } catch(e) { console.error('Could not open user dashboard preview:',e.message); res.status(500).json({error:'Could not open user dashboard'}); }
-  });
-
 /* Multi-currency account support: worldwide fiat catalogue and admin-configured receiving details. */
 const WORLD_FIAT_CURRENCIES = [
   'AED','AFN','ALL','AMD','ANG','AOA','ARS','AUD','AWG','AZN','BAM','BBD','BDT','BGN','BHD','BIF','BMD','BND','BOB','BRL','BSD','BTN','BWP','BYN','BZD','CAD','CDF','CHF','CLP','CNY','COP','CRC','CUP','CVE','CZK','DJF','DKK','DOP','DZD','EGP','ERN','ETB','EUR','FJD','FKP','GBP','GEL','GHS','GIP','GMD','GNF','GTQ','GYD','HKD','HNL','HTG','HUF','IDR','ILS','INR','IQD','IRR','ISK','JMD','JOD','JPY','KES','KGS','KHR','KMF','KPW','KRW','KWD','KYD','KZT','LAK','LBP','LKR','LRD','LSL','LYD','MAD','MDL','MGA','MKD','MMK','MNT','MOP','MRU','MUR','MVR','MWK','MXN','MYR','MZN','NAD','NGN','NIO','NOK','NPR','NZD','OMR','PAB','PEN','PGK','PHP','PKR','PLN','PYG','QAR','RON','RSD','RUB','RWF','SAR','SBD','SCR','SDG','SEK','SGD','SHP','SLE','SLL','SOS','SRD','SSP','STN','SVC','SYP','SZL','THB','TJS','TMT','TND','TOP','TRY','TTD','TWD','TZS','UAH','UGX','USD','UYU','UZS','VES','VND','VUV','WST','XAF','XCD','XOF','XPF','YER','ZAR','ZMW','ZWL'
@@ -257,19 +208,51 @@ function safeFiatReceivingBody(body){
     if(!result.changes) return res.status(404).json({error:'No receiving details configured for that currency.'});
     res.json({ok:true});
   });
-  // USER: return details only for currencies assigned to the authenticated user.
+  // Persist per-user/per-currency account details for the bank-deposit demo UI.
+  // Values are fictional UI data and are not connected to a real bank or payment rail.
+  db.exec(`CREATE TABLE IF NOT EXISTS user_bank_demo_details (
+    userId TEXT NOT NULL, currency TEXT NOT NULL, bankName TEXT NOT NULL, accountName TEXT NOT NULL,
+    accountNumber TEXT NOT NULL, iban TEXT NOT NULL, swift TEXT NOT NULL, routing TEXT NOT NULL,
+    bankAddress TEXT NOT NULL, instructions TEXT NOT NULL, createdAt INTEGER NOT NULL,
+    PRIMARY KEY(userId,currency)
+  )`);
+
+  function getOrCreateUserBankDetails(user, currency){
+    let details = db.prepare('SELECT currency,bankName,accountName,accountNumber,iban,swift,routing,bankAddress,instructions FROM user_bank_demo_details WHERE userId=? AND currency=?').get(user.id, currency);
+    if(details) {
+      if(details.accountName !== user.name) db.prepare('UPDATE user_bank_demo_details SET accountName=? WHERE userId=? AND currency=?').run(user.name, user.id, currency);
+      return {...details, accountName:user.name, status:'configured'};
+    }
+    const digits = (n) => Array.from(crypto.randomBytes(n), b => String(b % 10)).join('');
+    const accountNumber = '77' + digits(10);
+    const bankCode = 'WPGH';
+    const iban = 'BS' + String(10 + (crypto.randomBytes(1)[0] % 90)) + bankCode + digits(16);
+    const swift = 'WPGHBSN1';
+    const routing = 'WP' + digits(8);
+    const values = {
+      bankName:'West Pac Global Bank', accountName:user.name || 'Account Holder', accountNumber, iban, swift, routing,
+      bankAddress:'Nassau, The Bahamas', instructions:`Include reference ${'WPG' + digits(8)} when submitting a deposit.`
+    };
+    db.prepare(`INSERT INTO user_bank_demo_details(userId,currency,bankName,accountName,accountNumber,iban,swift,routing,bankAddress,instructions,createdAt)
+      VALUES(?,?,?,?,?,?,?,?,?,?,?)`).run(user.id,currency,values.bankName,values.accountName,values.accountNumber,values.iban,values.swift,values.routing,values.bankAddress,values.instructions,Date.now());
+    details = db.prepare('SELECT currency,bankName,accountName,accountNumber,iban,swift,routing,bankAddress,instructions FROM user_bank_demo_details WHERE userId=? AND currency=?').get(user.id,currency);
+    return {...details,status:'configured'};
+  }
+
+  // User bank details are unlocked only after KYC verification.
   app.get('/api/user/fiat-receiving-details', requireUser, (req, res) => {
     try {
-      const userId = authUserId(req);
+      const auth = req.auth || req.user || {};
+      const userId = auth.userId || auth.id || auth.sub;
       if(!userId) return res.status(401).json({error:'Authentication required'});
-      const row = db.prepare('SELECT preferredCurrencies FROM users WHERE id=?').get(userId);
+      const user = db.prepare('SELECT id,name,preferredCurrencies,kycStatus FROM users WHERE id=?').get(String(userId));
+      if(!user) return res.status(404).json({error:'User not found'});
+      if(!['verified','approved'].includes(String(user.kycStatus || '').toLowerCase()))
+        return res.status(403).json({error:'Bank deposit details unlock after KYC approval.'});
       let currencies = [];
-      try { const parsed = JSON.parse((row && row.preferredCurrencies) || '[]'); currencies = Array.isArray(parsed) ? parsed : []; } catch(e) {}
-      const configured = listFiatReceivingDetails();
-      return res.json(currencies.filter(c=>WORLD_FIAT_CURRENCIES.includes(String(c).toUpperCase())).map(c=>{
-        const code = String(c).toUpperCase();
-        return configured.find(d=>d.currency===code) || {currency:code,status:'pending'};
-      }));
+      try { const parsed = JSON.parse(user.preferredCurrencies || '[]'); currencies = Array.isArray(parsed) ? parsed : []; } catch(e) {}
+      const assigned = [...new Set(currencies.map(c=>String(c).toUpperCase()).filter(c=>WORLD_FIAT_CURRENCIES.includes(c)))];
+      return res.json(assigned.map(code=>getOrCreateUserBankDetails(user,code)));
     } catch(e) {
       console.error('Could not load user fiat receiving details:',e.message);
       return res.status(500).json({error:'Could not load receiving details'});
@@ -301,81 +284,41 @@ function safeFiatReceivingBody(body){
     catch(e) { res.status(503).json({error:'Live fiat exchange rates are temporarily unavailable.'}); }
   });
   app.get('/api/user/fiat-balances', requireUser, (req,res)=>{
-    const userId = authUserId(req);
+    const auth = req.auth || req.user || {};
+    const userId = auth.userId || auth.id || auth.sub;
     if(!userId) return res.status(401).json({error:'Authentication required'});
-    const user=db.prepare('SELECT preferredCurrencies,usdBalance FROM users WHERE id=?').get(userId);
-    if(!user) return res.status(404).json({error:'User not found'});
-    const assigned=parseAssignedCurrencies(user.preferredCurrencies).filter(c=>WORLD_FIAT_CURRENCIES.includes(c));
-    const rows=db.prepare('SELECT currency,balance,updatedAt FROM fiat_account_balances WHERE userId=?').all(userId);
-    const byCode=new Map(rows.map(r=>[r.currency,{currency:r.currency,balance:Number(r.balance)||0,updatedAt:r.updatedAt}]));
-    assigned.forEach(currency=>{ if(currency==='USD') byCode.set('USD',{currency:'USD',balance:Number(user.usdBalance)||0,updatedAt:Date.now()}); else if(!byCode.has(currency)) byCode.set(currency,{currency,balance:0,updatedAt:null}); });
-    res.json([...byCode.values()].filter(r=>assigned.includes(r.currency)).sort((a,b)=>a.currency.localeCompare(b.currency)));
+    const rows = db.prepare('SELECT currency,balance,updatedAt FROM fiat_account_balances WHERE userId=? ORDER BY currency').all(String(userId));
+    res.json(rows);
   });
   app.get('/api/user/fiat-transactions', requireUser, (req,res)=>{
-    const userId = authUserId(req);
+    const auth = req.auth || req.user || {};
+    const userId = auth.userId || auth.id || auth.sub;
     if(!userId) return res.status(401).json({error:'Authentication required'});
     res.json(db.prepare('SELECT id,currency,amount,type,status,reference,description,createdAt,source FROM fiat_account_transactions WHERE userId=? ORDER BY createdAt DESC').all(String(userId)));
   });
-  app.get('/api/admin/fiat-transactions', requireAdmin, (req,res)=>{
-    const rows=db.prepare(`SELECT f.id,f.userId,u.name AS userName,u.username AS userUsername,f.currency,f.amount,f.type,f.status,f.reference,f.description,f.createdAt,f.source
-      FROM fiat_account_transactions f LEFT JOIN users u ON u.id=f.userId ORDER BY f.createdAt DESC LIMIT 500`).all();
-    res.json(rows.map(r=>({...r,_id:r.id,user:{_id:r.userId,name:r.userName,username:r.userUsername}})));
-  });
   app.post('/api/admin/fiat-credit', requireAdmin, (req,res)=>{
-    const body=req.body||{}, userId=String(body.userId||'').trim(), currency=String(body.currency||'').trim().toUpperCase();
-    const amount=Number(body.amount), description=String(body.description||'Account balance adjustment by administrator').trim().slice(0,240);
-    if(!userId||!WORLD_FIAT_CURRENCIES.includes(currency)||!Number.isFinite(amount)||amount<=0||amount>1e12) return res.status(400).json({error:'Enter a valid user, assigned currency and positive amount.'});
-    const user=db.prepare('SELECT id,preferredCurrencies FROM users WHERE id=?').get(userId);
+    const body = req.body || {};
+    const userId = String(body.userId || '').trim();
+    const currency = String(body.currency || '').trim().toUpperCase();
+    const amount = Number(body.amount);
+    const description = String(body.description || 'Account balance adjustment by administrator').trim().slice(0,240);
+    if(!userId || !WORLD_FIAT_CURRENCIES.includes(currency) || !Number.isFinite(amount) || amount<=0 || amount>1e12)
+      return res.status(400).json({error:'Enter a valid user, assigned currency and positive amount.'});
+    const user = db.prepare('SELECT id,preferredCurrencies FROM users WHERE id=?').get(userId);
     if(!user) return res.status(404).json({error:'User not found.'});
-    if(!parseAssignedCurrencies(user.preferredCurrencies).filter(c=>WORLD_FIAT_CURRENCIES.includes(c)).includes(currency)) return res.status(400).json({error:'That currency is not assigned to this user. Assign it in user settings first.'});
-    const now=Date.now(); let receipt;
-    transaction(()=>{ changeFiatBalance(userId,currency,amount,now); receipt=recordFiatTx(userId,currency,amount,'admin_credit',description,'admin',now); });
-    res.json({ok:true,...receipt,currency,amount,status:'confirmed',createdAt:now,type:'admin_credit'});
-  });
-  app.post('/api/admin/fiat-debit', requireAdmin, (req,res)=>{
-    const body=req.body||{}, userId=String(body.userId||'').trim(), currency=String(body.currency||'').trim().toUpperCase();
-    const amount=Number(body.amount), description=String(body.description||'Account balance adjustment by administrator').trim().slice(0,240);
-    if(!userId||!WORLD_FIAT_CURRENCIES.includes(currency)||!Number.isFinite(amount)||amount<=0||amount>1e12) return res.status(400).json({error:'Enter a valid user, assigned currency and positive amount.'});
-    const user=db.prepare('SELECT id,preferredCurrencies FROM users WHERE id=?').get(userId);
-    if(!user) return res.status(404).json({error:'User not found.'});
-    if(!parseAssignedCurrencies(user.preferredCurrencies).filter(c=>WORLD_FIAT_CURRENCIES.includes(c)).includes(currency)) return res.status(400).json({error:'That currency is not assigned to this user.'});
-    if(getFiatBalance(userId,currency)<amount) return res.status(400).json({error:'Insufficient balance for this debit.'});
-    const now=Date.now(); let receipt;
-    transaction(()=>{ changeFiatBalance(userId,currency,-amount,now); receipt=recordFiatTx(userId,currency,-amount,'admin_debit',description,'admin',now); });
-    res.json({ok:true,...receipt,currency,amount,status:'confirmed',createdAt:now,type:'admin_debit'});
-  });
-  // Ensure defaults can be applied to existing users without replacing their current selections.
-  app.post('/api/admin/fiat-ensure-user', requireAdmin, (req,res)=>{
-    const userId=String((req.body||{}).userId||'').trim();
-    const user=db.prepare('SELECT id,country,preferredCurrencies FROM users WHERE id=?').get(userId);
-    if(!user) return res.status(404).json({error:'User not found.'});
-    const current=parseAssignedCurrencies(user.preferredCurrencies);
-    const fiatCurrent=current.filter(c=>WORLD_FIAT_CURRENCIES.includes(c));
-    const merged=[...new Set([...fiatCurrent,'USD','AUD','CAD','EUR',currencyDefaults(user.country)])];
-    const nonFiat=current.filter(c=>!WORLD_FIAT_CURRENCIES.includes(c));
-    const allAssigned=[...new Set([...merged,...nonFiat])];
-    db.prepare('UPDATE users SET preferredCurrencies=? WHERE id=?').run(JSON.stringify(allAssigned),userId);
-    const now=Date.now();
-    transaction(()=>{ for(const c of merged){ if(c!=='USD') db.prepare(`INSERT INTO fiat_account_balances(userId,currency,balance,updatedAt) VALUES(?,?,0,?) ON CONFLICT(userId,currency) DO NOTHING`).run(userId,c,now); } });
-    res.json({ok:true,preferredCurrencies:allAssigned});
-  });
-  app.post('/api/user/fiat-swap', requireUser, async (req,res)=>{
-    const userId=authUserId(req); if(!userId) return res.status(401).json({error:'Authentication required'});
-    const body=req.body||{}, from=String(body.fromCurrency||'').toUpperCase(), to=String(body.toCurrency||'').toUpperCase(), amount=Number(body.amount);
-    if(!WORLD_FIAT_CURRENCIES.includes(from)||!WORLD_FIAT_CURRENCIES.includes(to)||from===to||!Number.isFinite(amount)||amount<=0||amount>1e12) return res.status(400).json({error:'Choose two different assigned currencies and a valid amount.'});
-    const user=db.prepare('SELECT preferredCurrencies FROM users WHERE id=?').get(userId); if(!user) return res.status(404).json({error:'User not found.'});
-    const assigned=parseAssignedCurrencies(user.preferredCurrencies).filter(c=>WORLD_FIAT_CURRENCIES.includes(c)); if(!assigned.includes(from)||!assigned.includes(to)) return res.status(400).json({error:'Both currencies must be assigned to your account.'});
-    try {
-      const fx=await getFiatFxRates(); const fromRate=Number(fx.rates[from]), toRate=Number(fx.rates[to]);
-      if(!(fromRate>0)||!(toRate>0)) return res.status(503).json({error:'A live exchange rate is not available for one of these currencies.'});
-      if(getFiatBalance(userId,from)<amount) return res.status(400).json({error:'Insufficient balance.'});
-      const received=Math.round((amount/fromRate*toRate+Number.EPSILON)*100)/100;
-      if(!(received>0)&&Number.isFinite(received)) return res.status(400).json({error:'The converted amount is too small.'});
-      const now=Date.now(), description=`Swap ${amount} ${from} to ${received} ${to} at live FX rates (${fx.date||'latest available'}).`;
-      let debit,credit;
-      transaction(()=>{ changeFiatBalance(userId,from,-amount,now); changeFiatBalance(userId,to,received,now); debit=recordFiatTx(userId,from,-amount,'fiat_swap',description,'swap',now); credit=recordFiatTx(userId,to,received,'fiat_swap',description,'swap',now); });
-      res.json({ok:true,fromCurrency:from,toCurrency:to,amount,received,rate:received/amount,date:fx.date,reference:debit.reference,creditReference:credit.reference,status:'confirmed'});
-    } catch(e) { console.error('Fiat swap failed:',e.message); res.status(503).json({error:'Live exchange rates are temporarily unavailable. No funds were moved.'}); }
+    let assigned=[]; try { const parsed=JSON.parse(user.preferredCurrencies||'[]'); assigned=Array.isArray(parsed)?parsed.map(x=>String(x).toUpperCase()):[]; } catch(e) {}
+    if(!assigned.includes(currency)) return res.status(400).json({error:'That currency is not assigned to this user. Assign it in user settings first.'});
+    const id = crypto.randomUUID();
+    const reference = 'WPG-' + Date.now().toString(36).toUpperCase() + '-' + crypto.randomBytes(3).toString('hex').toUpperCase();
+    const now = Date.now();
+    const run = db.transaction(()=>{
+      db.prepare(`INSERT INTO fiat_account_balances(userId,currency,balance,updatedAt) VALUES(?,?,?,?)
+        ON CONFLICT(userId,currency) DO UPDATE SET balance=balance+excluded.balance,updatedAt=excluded.updatedAt`).run(userId,currency,amount,now);
+      db.prepare(`INSERT INTO fiat_account_transactions(id,userId,currency,amount,type,status,reference,description,createdAt,source)
+        VALUES(?,?,?,?,?,?,?,?,?,'admin')`).run(id,userId,currency,amount,'admin_credit','confirmed',reference,description,now);
+    });
+    run();
+    res.json({ok:true,id,reference,currency,amount,status:'confirmed',createdAt:now,type:'admin_credit'});
   });
 
   // PUBLIC: website "Open an Account" form (no login needed)

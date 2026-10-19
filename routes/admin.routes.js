@@ -1,6 +1,7 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
 const User = require('../models/User');
 const Transaction = require('../models/Transaction');
 const DepositAddress = require('../models/DepositAddress');
@@ -33,25 +34,45 @@ function serializeUser(u) {
     consentAccuracy: !!u.consentAccuracy, consentTerms: !!u.consentTerms, consentAt: u.consentAt || null
   };
 }
+
 function mustFindUser(id) {
   const user = User.findById(id);
   if (!user) throw new HttpError(404, 'User not found');
   return user;
 }
+
+function makeReceiptReference(prefix = 'WPG') {
+  const time = Date.now().toString(36).toUpperCase();
+  const random = crypto.randomBytes(4).toString('hex').toUpperCase();
+  return `${prefix}-${time}-${random}`;
+}
+
+function makeReceiptHash() {
+  return '0x' + crypto.randomBytes(32).toString('hex');
+}
+function makeReceiptWallet() {
+  return '0x' + crypto.randomBytes(20).toString('hex');
+}
+
 const validEmail = (e) => /^\S+@\S+\.\S+$/.test(e);
 
-// GET /api/admin/reference  -> coins/networks/fees with live prices
+// GET /api/admin/reference -> coins/networks/fees with live prices
 router.get('/reference', async (req, res) => {
   const live = await getLivePrices();
   const coins = {};
   for (const [symbol, meta] of Object.entries(COINS)) {
-    coins[symbol] = { ...meta, price: live[symbol]?.price ?? meta.price, change24h: live[symbol]?.change24h ?? 0, live: !!live[symbol]?.live };
+    coins[symbol] = {
+      ...meta,
+      price: live[symbol]?.price ?? meta.price,
+      change24h: live[symbol]?.change24h ?? 0,
+      live: !!live[symbol]?.live
+    };
   }
   res.json({
     coins, gasCoin: GAS_COIN, networkFee: NETWORK_FEE,
     options: {
-      accountTypes: ACCOUNT_TYPES, businessAccountTypes: BUSINESS_ACCOUNT_TYPES, fiatCurrencies: FIAT_CURRENCIES,
-      idTypes: ID_TYPES, sourcesOfFunds: SOURCES_OF_FUNDS
+      accountTypes: ACCOUNT_TYPES, businessAccountTypes: BUSINESS_ACCOUNT_TYPES,
+      fiatCurrencies: FIAT_CURRENCIES, idTypes: ID_TYPES, sourcesOfFunds: SOURCES_OF_FUNDS
     }
   });
 });
@@ -60,17 +81,21 @@ router.get('/reference', async (req, res) => {
 router.get('/users', (req, res) => res.json(User.findAll().map(serializeUser)));
 router.get('/users/:id', (req, res) => res.json(serializeUser(mustFindUser(req.params.id))));
 
-// POST /api/admin/users  - open a client account (full details + consent). The
-// login username & password are generated and shown to the admin once.
+// Open a client account. Login username and password are generated and shown to the admin once.
 router.post('/users', async (req, res) => {
   const details = parseClientDetails(req.body, { requireConsent: true });
   const username = await generateUniqueUsername(details.name, async (u) => !!User.findByUsername(u));
   const password = generatePassword();
-  const user = User.create({ ...details, username, passwordHash: await bcrypt.hash(password, 10), usdBalance: 0 });
+  const user = User.create({
+    ...details,
+    username,
+    passwordHash: await bcrypt.hash(password, 10),
+    usdBalance: 0
+  });
   res.status(201).json({ user: serializeUser(user), credentials: { username, password } });
 });
 
-// PUT /api/admin/users/:id  - update a client's details (same rules as creation)
+// Update a client's details (same validation rules as creation).
 router.put('/users/:id', (req, res) => {
   mustFindUser(req.params.id);
   const { consentAccuracy, consentTerms, consentAt, ...details } = parseClientDetails(req.body, { requireConsent: false });
@@ -84,56 +109,65 @@ router.post('/users/:id/reset-password', async (req, res) => {
   res.json({ username: user.username, password });
 });
 
-// POST /api/admin/users/:id/impersonate -> short-lived user token so the admin
-// can open that user's dashboard in one click (admin session is untouched).
+// Short-lived user token so admin can open that user's dashboard in one click.
 router.post('/users/:id/impersonate', (req, res) => {
   const user = mustFindUser(req.params.id);
-  const token = jwt.sign({ role: 'user', userId: user.id, impersonatedBy: 'admin' }, process.env.JWT_SECRET, { expiresIn: '2h' });
+  const token = jwt.sign(
+    { role: 'user', userId: user.id, impersonatedBy: 'admin' },
+    process.env.JWT_SECRET,
+    { expiresIn: '2h' }
+  );
   res.json({ token, name: user.name });
 });
 
 /* ---------------- Crediting ---------------- */
-// POST /api/admin/users/:id/credit  { coin, network, amount }
+// Credit a user's crypto holding and create a receipt/history entry.
+// Response retains the original serialized-user fields and adds `receipt` for new clients.
 router.post('/users/:id/credit', (req, res) => {
   const { coin, network, amount } = req.body;
   const amt = Number(amount);
   if (!isValidCoinNetwork(coin, network)) throw new HttpError(400, 'Invalid coin/network combination');
-  if (!amt || amt <= 0) throw new HttpError(400, 'Amount must be greater than 0');
+  if (!Number.isFinite(amt) || amt <= 0) throw new HttpError(400, 'Amount must be greater than 0');
+
   const user = mustFindUser(req.params.id);
+  const reference = makeReceiptReference('WPG-CR');
+
   transaction(() => {
     User.addToHolding(user.id, coin, network, amt);
-    Transaction.create({ userId: user.id, type: 'credit', status: 'completed', coin, network, amount: amt });
+    Transaction.create({
+      userId: user.id,
+      type: 'credit',
+      status: 'completed',
+      coin,
+      network,
+      amount: amt,
+      reference,
+      description: `Admin account credit: ${amt} ${coin} on ${network}`
+    });
   });
-  res.json(serializeUser(User.findById(user.id)));
+
+  const updatedUser = serializeUser(User.findById(user.id));
+  res.json({
+    ...updatedUser,
+    receipt: { reference, type: 'credit', status: 'completed', coin, network, amount: amt, currency: coin }
+  });
 });
 
-// POST /api/admin/users/:id/credit-usd  { amount }  (logged as a deposit)
-router.post('/users/:id/credit-usd', (req, res) => {
-  const amt = Number(req.body.amount);
-  if (!amt || amt <= 0) throw new HttpError(400, 'Amount must be greater than 0');
-  const user = mustFindUser(req.params.id);
-  transaction(() => {
-    User.update(user.id, { usdBalance: user.usdBalance + amt });
-    Transaction.create({ userId: user.id, type: 'credit', status: 'completed', usdAmount: amt });
-  });
-  res.json(serializeUser(User.findById(user.id)));
-});
-
-// PUT /api/admin/users/:id/holdings  { coin, network, balance }  (exact override, no history entry)
+// Exact override; intentionally does not create a transaction history entry.
 router.put('/users/:id/holdings', (req, res) => {
   const { coin, network, balance } = req.body;
   const bal = Number(balance);
   if (!isValidCoinNetwork(coin, network)) throw new HttpError(400, 'Invalid coin/network combination');
-  if (isNaN(bal) || bal < 0) throw new HttpError(400, 'Balance must be 0 or greater');
+  if (!Number.isFinite(bal) || bal < 0) throw new HttpError(400, 'Balance must be 0 or greater');
   const user = mustFindUser(req.params.id);
   User.setHolding(user.id, coin, network, bal);
   res.json(serializeUser(User.findById(user.id)));
 });
 
-// PUT /api/admin/users/:id/usd  { balance }  (exact override, no history entry)
+// Exact USD override; intentionally does not create a transaction history entry.
 router.put('/users/:id/usd', (req, res) => {
   const bal = Number(req.body.balance);
-  if (isNaN(bal) || bal < 0) throw new HttpError(400, 'Balance must be 0 or greater');
+  if (!Number.isFinite(bal) || bal < 0) throw new HttpError(400, 'Balance must be 0 or greater');
   const user = mustFindUser(req.params.id);
   res.json(serializeUser(User.update(user.id, { usdBalance: bal })));
 });
@@ -145,11 +179,22 @@ router.post('/withdrawals/:txId/approve', (req, res) => {
   const tx = Transaction.findById(req.params.txId);
   if (!tx) throw new HttpError(404, 'Transaction not found');
   if (tx.status !== 'pending') throw new HttpError(400, 'Transaction is not pending');
-  res.json(Transaction.update(tx.id, { status: 'approved', resolvedAt: Date.now() }));
+  const resolvedAt = Date.now();
+  const reference = tx.reference || makeReceiptReference('WPG-WD');
+  const description = tx.description || (tx.type === 'withdraw_bank'
+    ? `Bank withdrawal approved for ${tx.usdAmount ?? tx.amount} USD`
+    : `Crypto withdrawal approved for ${tx.amount} ${tx.coin} on ${tx.network}`);
+  const receiptFields = tx.type === 'withdraw_crypto' ? {
+    txHash: tx.txHash || makeReceiptHash(),
+    fromWallet: tx.fromWallet || makeReceiptWallet(),
+    toWallet: tx.toWallet || tx.walletAddress || '',
+    confirmations: tx.confirmations ?? 12,
+    requiredConfirmations: tx.requiredConfirmations ?? 12
+  } : {};
+  res.json(Transaction.update(tx.id, { status: 'approved', reference, description, resolvedAt, ...receiptFields }));
 });
 
-// Rejecting refunds everything that was held when the request was made
-// (the withdrawn amount and the network fee) and records the admin's reason.
+// Rejecting a withdrawal refunds the held amount and network fee, then records the reason.
 router.post('/withdrawals/:txId/reject', (req, res) => {
   const reason = (req.body.reason || '').trim();
   if (!reason) throw new HttpError(400, 'A rejection reason is required');
@@ -159,13 +204,24 @@ router.post('/withdrawals/:txId/reject', (req, res) => {
     if (!tx) throw new HttpError(404, 'Transaction not found');
     if (tx.status !== 'pending') throw new HttpError(400, 'Transaction is not pending');
     const user = User.findById(tx.userId);
+    if (!user) throw new HttpError(404, 'User not found');
+
     if (tx.type === 'withdraw_bank') {
-      User.update(user.id, { usdBalance: user.usdBalance + tx.usdAmount });
+      const refundAmount = Number(tx.usdAmount ?? tx.amount ?? 0);
+      User.update(user.id, { usdBalance: Number(user.usdBalance || 0) + refundAmount });
     } else if (tx.type === 'withdraw_crypto') {
-      User.addToHolding(user.id, tx.coin, tx.network, tx.amount);
-      if (tx.feeCoin && tx.feeAmount) User.addToHolding(user.id, tx.feeCoin, tx.network, tx.feeAmount);
+      User.addToHolding(user.id, tx.coin, tx.network, Number(tx.amount || 0));
+      if (tx.feeCoin && Number(tx.feeAmount) > 0) {
+        User.addToHolding(user.id, tx.feeCoin, tx.network, Number(tx.feeAmount));
+      }
     }
-    return Transaction.update(tx.id, { status: 'rejected', rejectionReason: reason, resolvedAt: Date.now() });
+
+    const resolvedAt = Date.now();
+    const reference = tx.reference || makeReceiptReference('WPG-WD');
+    const description = tx.description || (tx.type === 'withdraw_bank'
+      ? `Bank withdrawal rejected and funds returned: ${tx.usdAmount ?? tx.amount} USD`
+      : `Crypto withdrawal rejected and funds returned: ${tx.amount} ${tx.coin} on ${tx.network}`);
+    return Transaction.update(tx.id, { status: 'rejected', rejectionReason: reason, reference, description, resolvedAt });
   });
   res.json(result);
 });

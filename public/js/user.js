@@ -40,8 +40,6 @@ function fmtCoin(n){ n=Number(n)||0; return (Math.round(n*1e6)/1e6).toString(); 
 function fmtDate(ts){ const d=new Date(ts); return d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})+' · '+d.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'}); }
 function txTypeLabel(t){
   if(t.currency && t.type==='admin_credit') return 'Administrator account credit';
-  if(t.currency && t.type==='admin_debit') return 'Administrator account debit';
-  if(t.currency && t.type==='fiat_swap') return 'Fiat currency swap';
   if(t.type==='credit') return t.coin ? 'Deposit' : 'Deposit (USD)';
   if(t.type==='withdraw_bank') return 'Withdraw to Bank';
   if(t.type==='withdraw_crypto') return 'Withdraw to Crypto';
@@ -49,7 +47,7 @@ function txTypeLabel(t){
   return t.type;
 }
 function txAmountLabel(t){
-  if(t.currency) { const n=Number(t.amount)||0; return (n>0?'+':n<0?'−':'')+Math.abs(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:8})+' '+t.currency; }
+  if(t.currency) return '+'+Number(t.amount).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:8})+' '+t.currency;
   if(t.type==='withdraw_bank') return fmtUSD(t.usdAmount);
   if(t.type==='withdraw_crypto') return fmtCoin(t.amount)+' '+t.coin+' ('+t.network+')';
   if(t.type==='swap') return t.toCoin
@@ -60,7 +58,7 @@ function txAmountLabel(t){
 }
 function esc(x){ const d=document.createElement('div'); d.textContent=(x==null?'':String(x)); return d.innerHTML; }
 function txAmountParts(t){
-  if(t.currency) { const n=Number(t.amount)||0; const sign=n>0?'+':n<0?'−':''; return { main:sign+Math.abs(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:8})+' '+t.currency, sub:t.description|| (t.type==='fiat_swap'?'Currency exchange':t.type==='admin_debit'?'Account debit':'Account credit') }; }
+  if(t.currency) return { main:'+'+Number(t.amount).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:8})+' '+t.currency, sub:'Account credit' };
   if(t.type==='withdraw_bank') return { main: fmtUSD(t.usdAmount), sub:'' };
   if(t.type==='withdraw_crypto') return { main: fmtCoin(t.amount)+' '+t.coin, sub:t.network };
   if(t.type==='swap') return t.toCoin
@@ -105,7 +103,7 @@ function copyText(text, btnEl){
 
 async function nav(view){
   currentView = view;
-  ['dashboard','wallet','account','transactions','deposit','withdraw','buy','kyc','support','cards','upgrade','transfer'].forEach(v=>{
+  ['dashboard','wallet','account','transactions','deposit','withdraw','buy','kyc','support','loans'].forEach(v=>{
     const el = document.getElementById('view-'+v);
     if(el) el.classList.toggle('hidden', v!==view);
   });
@@ -113,9 +111,9 @@ async function nav(view){
   toggleSidebar(false);
   // dashboard / kyc / support / loans go through window.* so the extra scripts
   // (user-loans-kyc.js, user-support-ai.js) can replace them after this file loads
-  const fns = { dashboard:renderDashboard, wallet:renderWallet, account:renderAccount, transactions:renderTransactions,
-    deposit:renderDeposit, withdraw:renderWithdraw, buy:renderBuy, kyc:renderKyc, support:renderSupport,
-    cards:()=>window.renderCards(), upgrade:()=>window.renderUpgrade(), transfer:()=>window.renderTransfer() };
+  const fns = { dashboard:()=>window.renderDashboard(), wallet:renderWallet, account:renderAccount, transactions:renderTransactions,
+    deposit:renderDeposit, withdraw:renderWithdraw, buy:renderBuy, kyc:()=>window.renderKyc(), support:()=>window.renderSupport(),
+    loans:()=>window.renderLoans() };
   await fns[view]();
   await refreshNotifBadge();
 }
@@ -129,7 +127,7 @@ async function refreshNotifBadge(){
   else badge.classList.add('hidden');
 }
 
-function cryptoTotalUSD(u){ return Object.values(u.holdings).reduce((s,h)=>s+h.balance*(REF.coins[h.coin]?.price||0),0); }
+function cryptoTotalUSD(u){ return Object.values(u.holdings || {}).reduce((s,h)=>s+(Number(h.balance)||0)*(Number(REF.coins[h.coin]?.price)||0),0); }
 
 async function renderDashboard(){
   REF = await api('/user/reference');
@@ -143,7 +141,7 @@ async function renderDashboard(){
   try { fiatBalances = await api('/user/fiat-balances'); } catch(e) { /* older deployment */ }
   try { fiatRates = await api('/public/fx-rates'); } catch(e) { /* show rate unavailable */ }
   const cryptoVal = cryptoTotalUSD(u);
-  const holdings = Object.values(u.holdings).filter(h=>h.balance>0);
+  const holdings = Object.values(u.holdings || {}).filter(h=>(Number(h.balance)||0)>0);
   const unseenRejections = txs.filter(t=>t.status==='rejected' && !t.seenByUser);
 
   const notifHtml = unseenRejections.length ? `
@@ -151,7 +149,7 @@ async function renderDashboard(){
       <div class="card-title" style="color:#b4233a;"><i class="fa-solid fa-triangle-exclamation"></i> ${unseenRejections.length} Transaction${unseenRejections.length>1?'s':''} Rejected</div>
       ${unseenRejections.map(t=>`
         <div class="reject-banner" style="margin-bottom:8px;">
-          <b>${txTypeLabel(t)} · ${txAmountLabel(t)} · ${fmtDate(t.createdAt)}:</b> ${t.rejectionReason}
+          <b>${esc(txTypeLabel(t))} · ${esc(txAmountLabel(t))} · ${esc(fmtDate(t.createdAt))}:</b> ${esc(t.rejectionReason || '')}
         </div>
       `).join('')}
       <button class="btn btn-outline btn-sm" onclick="dismissAllNotifications()">Dismiss</button>
@@ -179,29 +177,31 @@ async function renderDashboard(){
         <div><div style="font-weight:600;">${h.coin}</div><div class="coin-meta">${h.network}</div></div></div>
       <div style="text-align:right;">
         <div class="mono" style="color:var(--text);">${fmtCoin(h.balance)}</div>
-        <div style="font-size:12px;color:var(--cyan);">${fmtUSD(h.balance*REF.coins[h.coin].price)}</div>
+        <div style="font-size:12px;color:var(--cyan);">${fmtUSD((Number(h.balance)||0) * (REF.coins[h.coin]?.price || 0))}</div>
       </div>
     </div>`).join('') : '<div class="empty-state">No crypto assets yet. Your administrator will credit your account.</div>';
 
   const recent = txs.slice(0,5);
   const txHtml = recent.length ? recent.map(txRowHTML).join('') : '<div class="empty-state">No transactions yet.</div>';
 
-  const donut = buildDonutSVG(holdings, u.usdBalance);
+  const fiatSegments = (u.preferredCurrencies||[]).map(currency=>{
+    const row = fiatBalances.find(x=>x.currency===currency);
+    const amount = row ? (Number(row.balance)||0) : 0;
+    const rate = currency==='USD' ? 1 : Number(fiatRates.rates && fiatRates.rates[currency]);
+    return {label:currency, value:amount>0 && rate>0 ? amount/rate : 0, color:currency==='USD'?'#0b2545':'#64748b'};
+  }).filter(x=>x.value>0);
+  const fiatLedgerUSD = fiatSegments.reduce((sum,x)=>sum+x.value,0);
+  const totalAccountUSD = cryptoVal + (Number(u.usdBalance)||0) + fiatLedgerUSD;
+  const donut = buildDonutSVG(holdings, Number(u.usdBalance)||0, fiatSegments);
 
-  const fiatBalanceCards = fiatBalances.map(x=>x.currency).filter(c=>/^[A-Z]{3}$/.test(c)).map(currency=>{
+  const fiatBalanceCards = (u.preferredCurrencies||[]).filter(c=>/^[A-Z]{3}$/.test(c)).map(currency=>{
     const bal = fiatBalances.find(x=>x.currency===currency);
     const amount = bal ? Number(bal.balance)||0 : 0;
     const rate = Number(fiatRates.rates && fiatRates.rates[currency]);
     const usdValue = currency==='USD' ? amount : (rate>0 ? amount/rate : null);
     return `<div class="market-tile" style="justify-content:space-between;"><div><div class="coin-meta">${esc(currency)} Balance</div><div style="font-weight:700;">${amount.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})} ${esc(currency)}</div><div class="coin-meta">${usdValue===null?'Live FX rate unavailable':'≈ '+fmtUSD(usdValue)}</div></div><div style="font-size:20px;color:var(--cyan);"><i class="fa-solid fa-building-columns"></i></div></div>`;
   }).join('');
-  const fiatTotalUSD = fiatBalances.reduce((sum,b)=>{
-    const amount=Number(b.balance)||0;
-    if(b.currency==='USD') return sum+amount;
-    const rate=Number(fiatRates.rates&&fiatRates.rates[b.currency]);
-    return sum+(rate>0?amount/rate:0);
-  },0);
-  const fiatCards = fiatReceivingDetails.map(x=>x.currency).filter(c=>/^[A-Z]{3}$/.test(c)).map(currency=>{
+  const fiatCards = (u.preferredCurrencies||[]).filter(c=>/^[A-Z]{3}$/.test(c)).map(currency=>{
     const d = fiatReceivingDetails.find(x=>x.currency===currency);
     const line = (label,value) => value ? `<div style="margin:5px 0;"><span class="muted">${label}:</span> <span class="mono">${esc(value)}</span></div>` : '';
     return `<div class="card" style="margin-bottom:12px;"><div class="card-title"><i class="fa-solid fa-building-columns"></i> ${esc(currency)} Receiving Account ${d && d.status==='configured' ? '<span class="pill pill-cyan">Configured</span>' : '<span class="pill pill-amber">Pending setup</span>'}</div>
@@ -211,11 +211,11 @@ async function renderDashboard(){
 
   document.getElementById('view-dashboard').innerHTML = `
     ${notifHtml}
-    ${fiatBalanceCards ? `<div class="section-label">Fiat Balances <span class="pill pill-cyan">${fiatRates.date && fiatRates.date!=='unavailable' ? 'FX date '+esc(fiatRates.date) : 'FX rate unavailable'}</span></div><div class="grid-2">${fiatBalanceCards}</div><button class="btn btn-outline btn-sm" style="margin:10px 0 18px;" onclick="openFiatSwapModal()"><i class="fa-solid fa-right-left"></i> Swap Fiat Currencies</button>` : ''}
+    ${fiatBalanceCards ? `<div class="section-label">Fiat Balances <span class="pill pill-cyan">${fiatRates.date && fiatRates.date!=='unavailable' ? 'FX date '+esc(fiatRates.date) : 'FX rate unavailable'}</span></div><div class="grid-2">${fiatBalanceCards}</div>` : ''}
     ${fiatCards ? `<div class="section-label">International Receiving Accounts</div>${fiatCards}` : ''}
     <div class="card">
       <div class="hero-balance">
-        <div class="amt">${fmtUSD(cryptoVal + fiatTotalUSD)}</div>
+        <div class="amt">${fmtUSD(totalAccountUSD)}</div>
         <div class="lbl">Total Account Value</div>
       </div>
       <div class="grid-2" style="margin-top:18px;">
@@ -245,6 +245,8 @@ async function renderDashboard(){
     <div class="card">${donut}</div>
   `;
 }
+window.renderDashboard = renderDashboard;
+
 async function dismissAllNotifications(){
   try{
     await api('/user/transactions/mark-all-seen', { method:'POST' });
@@ -253,12 +255,16 @@ async function dismissAllNotifications(){
   }catch(e){ toast(e.message,'err'); }
 }
 
-function buildDonutSVG(holdings, usdBalance){
-  const cryptoVal = holdings.reduce((s,h)=>s+h.balance*REF.coins[h.coin].price,0);
-  const total = cryptoVal + usdBalance;
+function buildDonutSVG(holdings, usdBalance, extraSegments=[]){
+  let segments = holdings.map(h=>({
+    label:h.coin,
+    value:(Number(h.balance)||0) * (Number(REF.coins[h.coin]?.price)||0),
+    color:COIN_COLORS[h.coin] || '#8b8da3'
+  }));
+  if(Number(usdBalance)>0) segments.push({label:'USD cash', value:Number(usdBalance), color:'#0b2545'});
+  segments = segments.concat(Array.isArray(extraSegments)?extraSegments:[]).filter(s=>Number(s.value)>0);
+  const total = segments.reduce((sum,s)=>sum+Number(s.value),0);
   if(total<=0) return '<div class="empty-state">Nothing to show yet.</div>';
-  let segments = holdings.map(h=>({label:h.coin, value:h.balance*REF.coins[h.coin].price, color:COIN_COLORS[h.coin]}));
-  if(usdBalance>0) segments.push({label:'USD', value:usdBalance, color:'#0b2545'});
   segments = segments.filter(s=>s.value>0);
   let acc=0;
   const stops = segments.map(s=>{
@@ -271,7 +277,7 @@ function buildDonutSVG(holdings, usdBalance){
 
 async function renderWallet(){
   const u = await api('/user/me');
-  const holdings = Object.values(u.holdings);
+  const holdings = Object.values(u.holdings || {});
   document.getElementById('view-wallet').innerHTML = `
     <div class="card">
       <div class="card-title"><i class="fa-solid fa-wallet"></i> Your Wallet</div>
@@ -284,7 +290,7 @@ async function renderWallet(){
           <div class="row gap-12">${coinIconHTML(h.coin,34)}
             <div><div style="font-weight:600;">${h.coin}</div><div class="coin-meta">${h.network}</div></div></div>
           <div class="row gap-8">
-            <div style="text-align:right;margin-right:6px;"><div class="mono">${fmtCoin(h.balance)}</div><div style="font-size:12px;color:var(--cyan);">${fmtUSD(h.balance*REF.coins[h.coin].price)}</div></div>
+            <div style="text-align:right;margin-right:6px;"><div class="mono">${fmtCoin(h.balance)}</div><div style="font-size:12px;color:var(--cyan);">${fmtUSD((Number(h.balance)||0) * (REF.coins[h.coin]?.price || 0))}</div></div>
             <button class="btn btn-primary btn-sm" onclick="openSwapModal('${h.coin}','${h.network}')"><i class="fa-solid fa-right-left"></i> Swap</button>
           </div>
         </div>`).join('') : '<div class="empty-state">No crypto assets yet.</div>'}
@@ -318,7 +324,7 @@ async function openSwapModal(coin, network){
 
   openModal(`
     <h3>Swap ${coin} <span class="muted" style="font-weight:500;font-size:14px;">· ${network}</span></h3>
-    <p class="muted" style="font-size:13px;">Available: ${fmtCoin(h.balance)} ${coin} ≈ ${fmtUSD(h.balance*REF.coins[coin].price)}</p>
+    <p class="muted" style="font-size:13px;">Available: ${fmtCoin(h.balance)} ${coin} ≈ ${fmtUSD((Number(h.balance)||0) * (REF.coins[coin]?.price || 0))}</p>
     ${gasOk ? '' : `<div class="warn-box"><i class="fa-solid fa-triangle-exclamation"></i> ${gasMsg}</div>`}
     ${gasOk ? `
       <div class="field"><label>Swap to</label><select id="swapDest" onchange="updateSwapEstimate('${coin}')">${destOptions.join('')}</select></div>
@@ -337,12 +343,16 @@ function updateSwapEstimate(coin){
   const amount = parseFloat(document.getElementById('swapAmount').value);
   const dest = document.getElementById('swapDest').value;
   if(!amount || amount<=0){ box.textContent = "Enter an amount to see what you'll receive."; return; }
-  const usdValue = amount * REF.coins[coin].price;
+  const coinPrice = Number(REF.coins[coin]?.price) || 0;
+  if(!coinPrice){ box.textContent = "Current price is unavailable. Please try again later."; return; }
+  const usdValue = amount * coinPrice;
   if(dest === 'USD'){
     box.innerHTML = `You'll receive about <b style="color:var(--green);">${fmtUSD(usdValue)}</b> in your USD balance.`;
   } else {
     const [toCoin, toNet] = dest.split('|');
-    const received = usdValue / REF.coins[toCoin].price;
+    const targetPrice = Number(REF.coins[toCoin]?.price) || 0;
+    if(!targetPrice){ box.textContent = "The target coin price is unavailable. Please try again later."; return; }
+    const received = usdValue / targetPrice;
     box.innerHTML = `You'll receive about <b style="color:var(--cyan);">${fmtCoin(received)} ${toCoin}</b> <span class="muted">(${toNet})</span> at the current market rate.`;
   }
 }
@@ -367,8 +377,8 @@ async function renderAccount(){
   const u = await api('/user/me');
   let fiatReceivingDetails = [];
   try { fiatReceivingDetails = await api('/user/fiat-receiving-details'); } catch(e) { /* compatible with older server */ }
-  const row = (label, value) => `<div><dt>${label}</dt><dd>${value || '—'}</dd></div>`;
-  const receivingHtml = fiatReceivingDetails.map(x=>x.currency).filter(c=>/^[A-Z]{3}$/.test(c)).map(currency=>{
+  const row = (label, value) => `<div><dt>${esc(label)}</dt><dd>${esc(value || '—')}</dd></div>`;
+  const receivingHtml = (u.preferredCurrencies||[]).filter(c=>/^[A-Z]{3}$/.test(c)).map(currency=>{
     const d = fiatReceivingDetails.find(x=>x.currency===currency);
     const fields = [['Bank / Provider',d&&d.bankName],['Account holder',d&&d.accountName],['Account number',d&&d.accountNumber],['IBAN',d&&d.iban],['SWIFT / BIC',d&&d.swift],['Routing / sort code',d&&d.routing],['Bank address',d&&d.bankAddress],['Instructions',d&&d.instructions]].filter(x=>x[1]);
     return `<div class="card" style="max-width:720px;margin-bottom:12px;"><div class="card-title"><i class="fa-solid fa-building-columns"></i> ${esc(currency)} Receiving Details ${d&&d.status==='configured'?'<span class="pill pill-cyan">Configured</span>':'<span class="pill pill-amber">Pending setup</span>'}</div>${fields.length?fields.map(([k,v])=>`<div style="margin:6px 0;"><span class="muted">${k}:</span> <span class="mono">${esc(v)}</span></div>`).join(''):'<p class="muted" style="font-size:13px;">No provider-issued receiving details have been configured for this currency yet.</p>'}</div>`;
@@ -394,7 +404,7 @@ async function renderAccount(){
 
     <div class="card" style="max-width:720px;">
       <div class="card-title"><i class="fa-solid fa-phone"></i> Contact Number</div>
-      <div class="field"><label>Phone number</label><input id="accPhone" value="${(u.phoneNumber||'').replace(/"/g,'&quot;')}"></div>
+      <div class="field"><label>Phone number</label><input id="accPhone" value="${esc(u.phoneNumber||'')}"></div>
       <button class="btn btn-primary" onclick="saveOwnPhone()">Update Number</button>
     </div>
   `;
@@ -409,74 +419,49 @@ async function saveOwnPhone(){
 }
 
 async function showTransactionReceipt(id){
-  try {
-    const key = String(id || '');
-    let all = Array.isArray(window._transactionHistory) ? window._transactionHistory : [];
-    let t = all.find(x => String(x._id || x.id || x.reference || '') === key);
-    if (!t) {
-      const results = await Promise.all([
-        api('/user/transactions').catch(() => []),
-        api('/user/fiat-transactions').catch(() => [])
-      ]);
-      const standard = Array.isArray(results[0]) ? results[0] : (results[0]?.transactions || []);
-      const fiat = Array.isArray(results[1]) ? results[1] : (results[1]?.transactions || []);
-      all = [...fiat, ...standard];
-      t = all.find(x => String(x._id || x.id || x.reference || '') === key);
-    }
-    if (!t) { toast('Could not find this transaction. Refresh Transaction History and try again.', 'err'); return; }
-    const rawType = String(t.type || '').toLowerCase();
-    const isFiat = !!t.currency;
-    const isBank = rawType.includes('bank') || rawType.includes('fiat') || isFiat;
-    const isWithdrawal = rawType.includes('withdraw');
-    const isCrypto = !isBank && (!!t.coin || !!t.network || rawType.includes('crypto'));
-    const isSwap = rawType.includes('swap');
-    const isDebit = rawType.includes('debit');
-    const status = String(t.status || 'recorded');
-    const ref = t.reference || t.referenceNo || t.txHash || t._id || t.id || 'Not supplied';
-    const created = fmtDate(t.createdAt || t.timestamp || Date.now());
-    const amount = isFiat
-      ? `${Math.abs(Number(t.amount) || 0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:8})} ${esc(t.currency)}`
-      : txAmountLabel(t);
-    const hash = t.txHash || t.transactionHash || t.transaction_hash || t.hash || '';
-    const network = t.network || t.toNetwork || t.blockchainNetwork || '';
-    const coin = t.coin || t.asset || (isFiat ? t.currency : '') || '';
-    const confirmations = t.confirmations ?? t.confirmationCount ?? t.blockConfirmations;
-    const required = t.requiredConfirmations ?? t.confirmationsRequired;
-    const fromWallet = t.fromWallet || t.fromAddress || t.senderAddress || t.sourceAddress || '';
-    const toWallet = t.toWallet || t.walletAddress || t.depositAddress || t.address || t.destinationAddress || '';
-    const bank = t.bankDetails || {};
-    const title = isBank ? (isWithdrawal ? 'Bank Withdrawal Receipt' : isDebit ? 'Account Debit Receipt' : 'Bank Transaction Receipt') : isWithdrawal ? 'Crypto Withdrawal Receipt' : isCrypto ? 'Crypto Deposit Receipt' : 'Transaction Receipt';
-    const line = (label, value) => receiptLine(label, value == null || value === '' ? 'Not provided' : String(value));
-    const cryptoRows = isCrypto ? `${line('Coin', coin)}${line('Network', network)}${line('From wallet', fromWallet)}${line('To wallet', toWallet)}${line('Transaction hash', hash)}${line('Confirmations', confirmations == null ? 'Not supplied' : (required == null ? String(confirmations) : `${confirmations} / ${required}`))}` : '';
-    const bankRows = isBank ? `${line('Recipient / account holder', t.recipient || bank.accountName || bank.accountHolder || bank.recipient || '')}${line('Bank / provider', bank.bankName || bank.bank || t.bankName || '')}${line('Account number', bank.accountNumber || bank.account || t.accountNumber || '')}${line('IBAN', bank.iban || '')}${line('SWIFT / BIC', bank.swift || bank.swiftBic || '')}${line('Bank address', bank.bankAddress || '')}${line('Payment reference', bank.paymentReference || t.paymentReference || '')}` : '';
-    const note = isCrypto && !hash ? '<div style="font-size:12px;color:#8a4b08;background:#fff7e6;border:1px solid #f5d7a1;border-radius:8px;padding:10px;margin:12px 0;">No blockchain transaction hash is saved for this record. This receipt does not independently verify an on-chain transfer.</div>' : '';
-    openModal(`<div id="receiptPrintable" style="background:#fff;color:#142033;padding:26px;border-radius:14px;max-width:680px;margin:auto;max-height:80vh;overflow:auto;">
-      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;border-bottom:2px solid #e7edf4;padding-bottom:16px;"><div><div style="font-size:20px;font-weight:800;letter-spacing:.2px;">WEST PAC GLOBAL BANK</div><div style="font-size:12px;color:#667085;margin-top:4px;">${esc(title)}</div></div><div style="font-size:11px;font-weight:700;color:${['completed','approved','confirmed'].includes(status.toLowerCase())?'#078447':'#475467'};border:1px solid #d0d5dd;border-radius:20px;padding:6px 10px;text-transform:uppercase;">${esc(status)}</div></div>
-      <div style="padding:22px 0 18px;text-align:center;"><div style="font-size:12px;color:#667085;">Amount</div><div style="font-size:30px;font-weight:800;margin-top:5px;overflow-wrap:anywhere;">${amount}</div><div style="font-size:13px;color:#667085;margin-top:8px;">${esc(txTypeLabel(t))}</div></div>
-      <div style="border-top:1px solid #e7edf4;">${line('Reference No.', ref)}${line('Date & time', created)}${line('Status', status)}${line('Description', t.description || (isDebit ? 'Account debit' : isWithdrawal ? 'Withdrawal record' : isCrypto ? 'Crypto transaction record' : isBank ? 'Bank transaction record' : 'Account transaction'))}${bankRows}${cryptoRows}${isSwap ? `${line('From asset', `${t.coin || ''} ${t.network ? '('+t.network+')' : ''}`)}${line('To asset', `${t.toCoin || t.currency || ''} ${t.toNetwork ? '('+t.toNetwork+')' : ''}`)}` : ''}${note}</div>
-      <div style="font-size:11px;color:#98a2b3;border-top:1px solid #e7edf4;padding-top:12px;margin-top:18px;">Receipt details reflect information recorded by the platform. Missing fields were not provided by the transaction record.</div>
-      <div class="no-print" style="display:flex;gap:8px;margin-top:18px;"><button class="btn btn-primary" onclick="printTransactionReceipt()"><i class="fa-solid fa-print"></i> Print / Save as PDF</button><button class="btn btn-outline" onclick="closeModal()">Close</button></div>
-    </div>`);
-  } catch (err) {
-    console.error('Unable to open transaction receipt:', err);
-    toast('Receipt could not open. Please refresh and try again.', 'err');
-  }
+  const [txs, fiatTxs] = await Promise.all([
+    api('/user/transactions').catch(()=>[]), api('/user/fiat-transactions').catch(()=>[])
+  ]);
+  const t = [...fiatTxs, ...txs].find(x=>String(x._id||x.id||x.reference||'')===String(id));
+  if(!t){ toast('Transaction details could not be loaded. Refresh the page and try again.','err'); return; }
+  const isFiat = !!t.currency;
+  const type = isFiat ? (t.type==='admin_credit'?'Administrator account credit':t.type) : txTypeLabel(t);
+  const amount = isFiat ? `${Number(t.amount).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:8})} ${esc(t.currency)}` : txAmountLabel(t);
+  const created = fmtDate(t.createdAt);
+  const status = String(t.status||'recorded');
+  const ref = t.reference || t._id || t.id || 'Not supplied';
+  const hash = t.txHash || t.transactionHash || t.hash || '';
+  const wallet = t.walletAddress || t.depositAddress || t.address || '';
+  const network = t.network || t.toNetwork || '';
+  openModal(`<div id="receiptPrintable" style="background:#fff;color:#142033;padding:26px;border-radius:14px;max-width:620px;margin:auto;">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;border-bottom:2px solid #e7edf4;padding-bottom:16px;">
+      <div><div style="font-size:20px;font-weight:800;letter-spacing:.2px;">WESTPAC GLOBAL</div><div style="font-size:12px;color:#667085;margin-top:4px;">Account transaction receipt</div></div>
+      <div style="font-size:11px;font-weight:700;color:#475467;border:1px solid #d0d5dd;border-radius:20px;padding:6px 10px;text-transform:uppercase;">${esc(status)}</div>
+    </div>
+    <div style="padding:22px 0 18px;text-align:center;"><div style="font-size:12px;color:#667085;">Recorded amount</div><div style="font-size:32px;font-weight:800;margin-top:5px;">${amount}</div><div style="font-size:13px;color:#667085;margin-top:8px;">${esc(type)}</div></div>
+    <div style="border-top:1px solid #e7edf4;">
+      ${receiptLine('Date and time',created)}${receiptLine('Status',status)}${receiptLine('Reference',ref)}
+      ${network?receiptLine('Network',network):''}${wallet?receiptLine('Wallet address',wallet):''}${hash?receiptLine('Transaction hash',hash):''}
+      ${t.description?receiptLine('Description',t.description):''}
+      ${!isFiat && !hash && (t.coin||t.network)?'<div style="font-size:12px;color:#8a4b08;background:#fff7e6;border:1px solid #f5d7a1;border-radius:8px;padding:10px;margin:12px 0;">Blockchain hash not supplied in this record. This receipt does not independently verify an on-chain transfer.</div>':''}
+      ${isFiat?'<div style="font-size:12px;color:#667085;margin-top:14px;">Record type: administrator account credit. This is not a bank-issued transfer confirmation.</div>':''}
+    </div>
+    <div style="font-size:11px;color:#98a2b3;border-top:1px solid #e7edf4;padding-top:12px;margin-top:18px;">Keep this receipt for your records. Transaction status reflects the platform record at the time shown.</div>
+    <div class="no-print" style="display:flex;gap:8px;margin-top:18px;"><button class="btn btn-primary" onclick="printTransactionReceipt()"><i class="fa-solid fa-print"></i> Print / Save as PDF</button><button class="btn btn-outline" onclick="closeModal()">Close</button></div>
+  </div>`);
 }
-window.showTransactionReceipt = showTransactionReceipt;
 function receiptLine(label,value){ return `<div style="display:flex;justify-content:space-between;gap:18px;padding:11px 0;border-bottom:1px solid #eef2f6;font-size:13px;"><span style="color:#667085;">${esc(label)}</span><span style="font-weight:650;text-align:right;word-break:break-word;max-width:65%;">${esc(value)}</span></div>`; }
 function printTransactionReceipt(){
   const receipt=document.getElementById('receiptPrintable'); if(!receipt) return;
   const w=window.open('','_blank','width=760,height=900');
   if(!w){ toast('Allow pop-ups to print or save the receipt.','err'); return; }
-  w.document.write(`<!doctype html><html><head><title>West Pac Global Bank — Transaction Receipt</title><meta charset="utf-8"><style>body{font-family:Arial,sans-serif;padding:24px;color:#142033}button,.no-print{display:none!important}@media print{body{padding:0}}</style></head><body>${receipt.outerHTML}</body></html>`);
+  w.document.write(`<!doctype html><html><head><title>Westpac Global — Transaction Receipt</title><meta charset="utf-8"><style>body{font-family:Arial,sans-serif;padding:24px;color:#142033}button,.no-print{display:none!important}@media print{body{padding:0}}</style></head><body>${receipt.outerHTML}</body></html>`);
   w.document.close(); w.focus(); setTimeout(()=>w.print(),250);
 }
 
 async function renderTransactions(){
-  const baseResult = await api('/user/transactions');
-  let txs = Array.isArray(baseResult) ? baseResult : (baseResult?.transactions || []);
-  try { const fiatResult = await api('/user/fiat-transactions'); const fiatTxs = Array.isArray(fiatResult) ? fiatResult : (fiatResult?.transactions || []); txs = [...fiatTxs, ...txs].sort((a,b)=>(Number(b.createdAt)||0)-(Number(a.createdAt)||0)); } catch(e) {}
-  window._transactionHistory = txs;
+  let txs = await api('/user/transactions');
+  try { const fiatTxs = await api('/user/fiat-transactions'); txs = [...fiatTxs, ...txs].sort((a,b)=>(Number(b.createdAt)||0)-(Number(a.createdAt)||0)); } catch(e) {}
   document.getElementById('view-transactions').innerHTML = `
     <div class="card">
       <div class="card-title"><i class="fa-solid fa-file-invoice"></i> Transaction History</div>
@@ -491,86 +476,62 @@ async function renderTransactions(){
 }
 
 async function renderDeposit(){
-  const addresses=await api('/user/deposit-addresses');
-  let bankDetails=[]; try{ bankDetails=await api('/user/fiat-receiving-details'); }catch(e){}
-  window._depAddresses=addresses; window._depBankDetails=bankDetails;
-  document.getElementById('view-deposit').innerHTML=`
-    <div class="card" style="max-width:760px;">
-      <div class="card-title"><i class="fa-solid fa-arrow-down"></i> Deposit Funds</div>
-      <p class="muted" style="font-size:13px;">Choose how you want to fund your account.</p>
-      <div class="grid-2" style="margin:14px 0;">
-        <button class="choice-card" onclick="showDepositMethod('crypto')" style="text-align:left;border:1px solid var(--border);cursor:pointer;"><div class="ic"><i class="fa-brands fa-bitcoin"></i></div><h4>Crypto Deposit</h4><p>Deposit a supported coin using its matching network.</p></button>
-        <button class="choice-card" onclick="showDepositMethod('bank')" style="text-align:left;border:1px solid var(--border);cursor:pointer;"><div class="ic"><i class="fa-solid fa-building-columns"></i></div><h4>Bank Transfer</h4><p>View the bank or payment-provider details configured for your assigned currencies.</p></button>
-      </div>
-      <div id="depositMethodContent"></div>
-    </div>`;
-  showDepositMethod('crypto');
-}
-function showDepositMethod(kind){
-  const host=document.getElementById('depositMethodContent'); if(!host)return;
-  if(kind==='bank'){
-    const details=window._depBankDetails||[];
-    const ready=details.filter(d=>d.status==='configured');
-    if(!ready.length){host.innerHTML='<div class="warn-box"><i class="fa-solid fa-circle-info"></i> Bank receiving details are not configured for your assigned currencies yet. Please contact support. Do not send money to an unverified account.</div>';return;}
-    const options=ready.map(d=>`<option value="${esc(d.currency)}">${esc(d.currency)} — ${esc(d.bankName||'Bank transfer')}</option>`).join('');
-    host.innerHTML=`<div class="field"><label>Deposit currency</label><select id="bankDepCurrency" onchange="refreshBankDepositDetails()">${options}</select></div><div id="bankDepositDetails"></div>`;
-    refreshBankDepositDetails(); return;
-  }
-  const coinOptions=Object.keys(REF.coins).map(c=>`<option value="${c}">${c} — ${REF.coins[c].name}</option>`).join('');
-  host.innerHTML=`<div class="field"><label>Coin</label><select id="depCoin" onchange="refreshDepNetworks()">${coinOptions}</select></div><div class="field"><label>Network</label><select id="depNetwork"></select></div><div id="depAddressBox"></div>`;
+  const addresses = await api('/user/deposit-addresses');
+  const u = await api('/user/me');
+  let receivingDetails = [];
+  try { receivingDetails = await api('/user/fiat-receiving-details'); } catch(e) { /* bank receiving details may not be enabled */ }
+  const kycApproved = ['verified','approved'].includes(String(u.kycStatus||'').toLowerCase());
+  const bankDepositHtml = kycApproved ? (u.preferredCurrencies||[]).filter(c=>/^[A-Z]{3}$/.test(c)).map(currency=>{
+    const d = receivingDetails.find(x=>String(x.currency||'').toUpperCase()===currency && x.status==='configured');
+    if(!d) return `<div class="card" style="margin-top:12px;"><div class="card-title"><i class="fa-solid fa-building-columns"></i> ${esc(currency)} Bank Deposit</div><p class="muted" style="font-size:13px;">Receiving details have not been configured for ${esc(currency)} yet. Do not send money until the details are available.</p></div>`;
+    const fields = [['Bank / Provider',d.bankName],['Account holder',d.accountName],['Account number',d.accountNumber],['IBAN',d.iban],['SWIFT / BIC',d.swift],['Routing / sort code',d.routing],['Bank address',d.bankAddress],['Instructions',d.instructions]].filter(x=>x[1]);
+    return `<div class="card" style="margin-top:12px;"><div class="card-title"><i class="fa-solid fa-building-columns"></i> ${esc(currency)} Bank Deposit Details</div>${fields.map(([k,v])=>`<div style="margin:6px 0;"><span class="muted">${esc(k)}:</span> <span class="mono">${esc(v)}</span></div>`).join('')}<p class="hint" style="margin-top:10px;">Only send a transfer after confirming these details with your bank/provider.</p></div>`;
+  }).join('') : '<div class="warn-box" style="margin-top:12px;"><i class="fa-solid fa-lock"></i> Bank deposit details are available only after KYC verification is approved.</div>'; 
+  const coinOptions = Object.keys(REF.coins).map(c=>`<option value="${c}">${c} — ${REF.coins[c].name}</option>`).join('');
+  document.getElementById('view-deposit').innerHTML = `
+    <div class="card" style="max-width:520px;">
+      <div class="card-title"><i class="fa-solid fa-arrow-down"></i> Deposit</div>
+      <p class="muted" style="font-size:13px;">Select a coin and network to deposit.</p>
+      <div class="field"><label>Coin</label><select id="depCoin" onchange="refreshDepNetworks()">${coinOptions}</select></div>
+      <div class="field"><label>Network</label><select id="depNetwork"></select></div>
+      <div id="depAddressBox"></div>
+    </div>
+    <div class="section-label" style="margin-top:18px;">Bank Transfer Deposit</div>
+    ${bankDepositHtml}
+  `;
+  window._depAddresses = addresses;
   refreshDepNetworks();
 }
-function refreshBankDepositDetails(){
-  const currency=document.getElementById('bankDepCurrency')?.value;
-  const d=(window._depBankDetails||[]).find(x=>x.currency===currency&&x.status==='configured');
-  const box=document.getElementById('bankDepositDetails'); if(!box)return;
-  if(!d){box.innerHTML='<div class="warn-box">No configured receiving details for this currency.</div>';return;}
-  const line=(label,value)=>value?`<div style="display:flex;gap:14px;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--border);"><span class="muted">${label}</span><span style="text-align:right;word-break:break-word;">${esc(value)}</span></div>`:'';
-  box.innerHTML=`<div class="creds-box"><div class="card-title"><i class="fa-solid fa-building-columns"></i> ${esc(d.currency)} Bank Details</div>${line('Bank / Provider',d.bankName)}${line('Account holder',d.accountName)}${line('Account number',d.accountNumber)}${line('IBAN',d.iban)}${line('SWIFT / BIC',d.swift)}${line('Routing / sort code',d.routing)}${line('Bank address',d.bankAddress)}${line('Instructions',d.instructions)}<div class="hint" style="margin-top:12px;">Confirm the recipient details before sending. Your balance is not credited automatically; follow the provider instructions and contact support if needed.</div></div>`;
-}
 function refreshDepNetworks(){
-  const coin=document.getElementById('depCoin')?.value; if(!coin||!REF.coins[coin])return;
-  const sel=document.getElementById('depNetwork');
-  sel.innerHTML=REF.coins[coin].networks.map(n=>`<option value="${n}">${n}</option>`).join('');
-  sel.onchange=refreshDepAddress; refreshDepAddress();
+  const coin = document.getElementById('depCoin')?.value;
+  const sel = document.getElementById('depNetwork');
+  const networks = REF.coins[coin]?.networks || [];
+  if(!sel) return;
+  sel.innerHTML = networks.map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join('');
+  sel.onchange = refreshDepAddress;
+  refreshDepAddress();
 }
 function refreshDepAddress(){
-  const coin=document.getElementById('depCoin')?.value, network=document.getElementById('depNetwork')?.value;
-  const match=(window._depAddresses||[]).find(a=>a.coin===coin&&a.network===network);
-  const box=document.getElementById('depAddressBox'); if(!box)return;
+  const coin = document.getElementById('depCoin').value;
+  const network = document.getElementById('depNetwork').value;
+  const match = (window._depAddresses||[]).find(a=>a.coin===coin && a.network===network);
+  const box = document.getElementById('depAddressBox');
   if(match){
-    box.innerHTML=`<div class="creds-box"><div class="coin-meta" style="margin-bottom:8px;">Send ${esc(coin)} (${esc(network)}) only to this address:</div><div class="row gap-8" style="justify-content:space-between;"><div class="mono" style="word-break:break-all;color:var(--cyan);flex:1;">${esc(match.address)}</div><button class="btn btn-outline btn-sm" onclick="copyText('${esc(match.address)}', this)"><i class="fa-solid fa-copy"></i></button></div><div class="hint" style="margin-top:10px;">Notify your administrator after sending so they can credit your balance.</div></div>`;
-  } else box.innerHTML=`<div class="warn-box"><i class="fa-solid fa-triangle-exclamation"></i> No deposit address has been configured yet for ${esc(coin)} on ${esc(network)}.</div>`;
-}
-
-async function openFiatSwapModal(){
-  let u,balances,rates;
-  try{[u,balances,rates]=await Promise.all([api('/user/me'),api('/user/fiat-balances'),api('/public/fx-rates')]);}
-  catch(e){toast('Could not load live FX rates or balances. Please try again later.','err');return;}
-  const assigned=(u.preferredCurrencies||[]).filter(c=>/^[A-Z]{3}$/.test(c)&&Number(rates.rates?.[c])>0);
-  if(assigned.length<2){toast('At least two assigned currencies need live exchange rates to swap.','err');return;}
-  const options=assigned.map(c=>`<option value="${esc(c)}">${esc(c)} · ${(balances.find(b=>b.currency===c)?.balance||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})} available</option>`).join('');
-  openModal(`<h3><i class="fa-solid fa-right-left"></i> Swap Fiat Currencies</h3><p class="muted" style="font-size:13px;">Exchange using the latest available reference rates. FX date: ${esc(rates.date||'unknown')}.</p><div class="field"><label>From currency</label><select id="fiatSwapFrom" onchange="updateFiatSwapEstimate()">${options}</select></div><div class="field"><label>To currency</label><select id="fiatSwapTo" onchange="updateFiatSwapEstimate()">${options}</select></div><div class="field"><label>Amount to exchange</label><input id="fiatSwapAmount" type="number" min="0.01" step="0.01" placeholder="0.00" oninput="updateFiatSwapEstimate()"></div><div id="fiatSwapEstimate" class="creds-box">Enter an amount to estimate the exchange.</div><div class="row gap-8" style="margin-top:14px;"><button class="btn btn-primary btn-block" onclick="doFiatSwap()">Confirm Fiat Swap</button><button class="btn btn-outline" onclick="closeModal()">Cancel</button></div>`);
-  window._fiatSwapRates=rates; window._fiatSwapBalances=balances;
-  const to=document.getElementById('fiatSwapTo'); if(to&&to.options.length>1)to.selectedIndex=1;
-  updateFiatSwapEstimate();
-}
-function updateFiatSwapEstimate(){
-  const from=document.getElementById('fiatSwapFrom')?.value,to=document.getElementById('fiatSwapTo')?.value,amount=Number(document.getElementById('fiatSwapAmount')?.value);
-  const box=document.getElementById('fiatSwapEstimate'); if(!box)return;
-  if(from===to){box.textContent='Choose two different currencies.';return;}
-  const rates=window._fiatSwapRates?.rates||{},fromRate=Number(rates[from]),toRate=Number(rates[to]);
-  if(!(fromRate>0)||!(toRate>0)){box.textContent='A live rate is unavailable for this pair.';return;}
-  const bal=Number((window._fiatSwapBalances||[]).find(b=>b.currency===from)?.balance)||0;
-  if(!amount||amount<=0){box.textContent=`Available: ${bal.toLocaleString()} ${from}. Enter an amount to estimate the exchange.`;return;}
-  const received=Math.round((amount/fromRate*toRate+Number.EPSILON)*100)/100;
-  box.innerHTML=`Estimated receive: <b>${received.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})} ${esc(to)}</b><div class="hint">Available: ${bal.toLocaleString()} ${esc(from)} · ${esc(from)} to USD rate: ${(1/fromRate).toFixed(6)} · FX date: ${esc(window._fiatSwapRates?.date||'unknown')}</div>`;
-}
-async function doFiatSwap(){
-  const from=document.getElementById('fiatSwapFrom')?.value,to=document.getElementById('fiatSwapTo')?.value,amount=Number(document.getElementById('fiatSwapAmount')?.value);
-  if(!from||!to||from===to||!Number.isFinite(amount)||amount<=0){toast('Choose two different currencies and enter a valid amount.','err');return;}
-  try{const result=await api('/user/fiat-swap',{method:'POST',body:{fromCurrency:from,toCurrency:to,amount}});toast(`Swapped ${amount} ${from} to ${result.received} ${to}`,'ok');closeModal();if(currentView==='transactions')await renderTransactions();else await renderDashboard();}
-  catch(e){toast(e.message,'err');}
+    box.innerHTML = `
+      <div class="creds-box">
+        <div class="coin-meta" style="margin-bottom:8px;">Send ${coin} (${network}) only to this address:</div>
+        <div class="row gap-8" style="justify-content:space-between;">
+          <div class="mono" style="word-break:break-all;color:var(--cyan);flex:1;">${esc(match.address)}</div>
+          <button class="btn btn-outline btn-sm" type="button" data-copy-address="${esc(match.address)}"><i class="fa-solid fa-copy"></i></button>
+        </div>
+        <div class="hint" style="margin-top:10px;">Notify your administrator after sending so they can credit your balance.</div>
+      </div>
+    `;
+    const copyBtn = box.querySelector('[data-copy-address]');
+    if(copyBtn) copyBtn.addEventListener('click', ()=>copyText(copyBtn.getAttribute('data-copy-address') || '', copyBtn));
+  } else {
+    box.innerHTML = `<div class="warn-box"><i class="fa-solid fa-triangle-exclamation"></i> No deposit address has been configured yet for ${esc(coin)} on ${esc(network)}.</div>`;
+  }
 }
 
 async function renderWithdraw(){
@@ -600,7 +561,7 @@ async function showWithdrawForm(kind){
       </div>
     `;
   } else {
-    const holdings = Object.values(u.holdings).filter(h=>h.balance>0);
+    const holdings = Object.values(u.holdings || {}).filter(h=>(Number(h.balance)||0)>0);
     const opts = holdings.map(h=>`<option value="${h.coin}_${h.network}">${h.coin} · ${h.network} (${fmtCoin(h.balance)} available)</option>`).join('');
     area.innerHTML = `
       <div class="card" style="max-width:480px;">
@@ -663,13 +624,13 @@ async function renderBuy(){
   document.getElementById('view-buy').innerHTML = `
     <div class="card" style="max-width:480px;">
       <div class="card-title"><i class="fa-solid fa-cart-shopping"></i> Buy Crypto</div>
-      <p class="muted" style="font-size:13px;">To buy cryptocurrency, select your preferred payment method and follow the instructions to complete your purchase. Available payment options depend on the payment providers supported by this platform.</p>
+      <p class="muted" style="font-size:13px;">Buying with a real card or bank transfer isn't wired up on this platform. In a production build, this is where you'd hand off to a payment/on-ramp provider.</p>
       <div class="field"><label>Coin</label><select id="buyCoin">${coinOptions}</select></div>
       <div class="field"><label>Amount (USD)</label><input id="buyAmount" type="number" min="0" step="1" placeholder="e.g. 100"></div>
       <a href="https://www.coingecko.com/en/exchanges" target="_blank" rel="noopener" class="btn btn-primary btn-block">
         <i class="fa-solid fa-arrow-up-right-from-square"></i> Continue to Payment
       </a>
-      <div class="hint" style="margin-top:8px;">To receive cryptocurrency, use the deposit address provided for your selected coin and network. Deposits will be credited to your account after the required network confirmations.</div>
+      <div class="hint" style="margin-top:8px;">This link is illustrative only — for testing, ask your administrator to credit crypto to your account instead.</div>
     </div>
   `;
 }
@@ -781,12 +742,12 @@ async function chatAsk(text){
 (async function init(){
   const u = await api('/user/me');
   REF = await api('/user/reference');
-  document.getElementById('welcome').innerHTML = `Welcome back, <span>${u.name}</span>!`;
+  document.getElementById('welcome').innerHTML = `Welcome back, <span>${esc(u.name)}</span>!`;
   document.getElementById('avatar').textContent = u.name.trim()[0].toUpperCase();
   if (Session.impersonating) {
     const bar = document.createElement('div');
     bar.style.cssText = 'background:#fdf6e8;border:1px solid var(--gold-light);color:#6b5520;padding:10px 16px;border-radius:10px;margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;gap:12px;font-size:13.5px;';
-    bar.innerHTML = `<span><i class="fa-solid fa-user-shield"></i> Admin view — you're looking at <b>${u.name}</b>'s dashboard (@${u.username}).</span><button class="btn btn-outline btn-sm" onclick="logout()">Exit view</button>`;
+    bar.innerHTML = `<span><i class="fa-solid fa-user-shield"></i> Admin view — you're looking at <b>${esc(u.name)}</b>'s dashboard (@${esc(u.username)}).</span><button class="btn btn-outline btn-sm" onclick="logout()">Exit view</button>`;
     document.querySelector('.main').prepend(bar);
   }
   await nav('dashboard');
