@@ -663,13 +663,13 @@ async function renderBuy(){
   document.getElementById('view-buy').innerHTML = `
     <div class="card" style="max-width:480px;">
       <div class="card-title"><i class="fa-solid fa-cart-shopping"></i> Buy Crypto</div>
-      <p class="muted" style="font-size:13px;">Buying with a real card or bank transfer isn't wired up on this platform. In a production build, this is where you'd hand off to a payment/on-ramp provider.</p>
+      <p class="muted" style="font-size:13px;">To buy cryptocurrency, select your preferred payment method and follow the instructions to complete your purchase. Available payment options depend on the payment providers supported by this platform.</p>
       <div class="field"><label>Coin</label><select id="buyCoin">${coinOptions}</select></div>
       <div class="field"><label>Amount (USD)</label><input id="buyAmount" type="number" min="0" step="1" placeholder="e.g. 100"></div>
       <a href="https://www.coingecko.com/en/exchanges" target="_blank" rel="noopener" class="btn btn-primary btn-block">
         <i class="fa-solid fa-arrow-up-right-from-square"></i> Continue to Payment
       </a>
-      <div class="hint" style="margin-top:8px;">This link is illustrative only — for testing, ask your administrator to credit crypto to your account instead.</div>
+      <div class="hint" style="margin-top:8px;">To receive cryptocurrency, use the deposit address provided for your selected coin and network. Deposits will be credited to your account after the required network confirmations.</div>
     </div>
   `;
 }

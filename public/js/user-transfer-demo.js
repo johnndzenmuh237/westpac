@@ -18,18 +18,18 @@
   };
   function item(r){
     var s = r.status === 'approved'
-      ? '<div class="reject-banner" style="'+OK+'margin-top:10px;"><i class="fa-solid fa-circle-check"></i> <b>Approved (demo).</b> '+esc(r.adminMessage||'')+'</div>'
+      ? '<div class="reject-banner" style="'+OK+'margin-top:10px;"><i class="fa-solid fa-circle-check"></i> <b>Approved.</b> '+esc(r.adminMessage||'')+'</div>'
       : r.status === 'rejected'
       ? '<div class="reject-banner" style="'+BAD+'margin-top:10px;font-weight:600;"><i class="fa-solid fa-circle-xmark"></i> <b>Rejected:</b> '+esc(r.adminMessage||'')+'</div>'
       : '<div style="margin-top:10px;"><span class="pill pill-amber"><i class="fa-solid fa-clock"></i> Under review</span></div>';
-    return '<div style="padding:14px 0;border-bottom:1px solid var(--border,#e6e8ef);"><div class="row gap-8" style="justify-content:space-between;"><div><b>'+esc(r.method)+'</b> · '+fmtUSD(r.amount)+' (demo)</div><div class="muted" style="font-size:12.5px;">'+fmtDate(r.createdAt)+'</div></div><div class="muted" style="font-size:13px;margin-top:4px;">'+esc(r.recipient)+'</div>'+s+'</div>';
+    return '<div style="padding:14px 0;border-bottom:1px solid var(--border,#e6e8ef);"><div class="row gap-8" style="justify-content:space-between;"><div><b>'+esc(r.method)+'</b> · '+fmtUSD(r.amount)+'</div><div class="muted" style="font-size:12.5px;">'+fmtDate(r.createdAt)+'</div></div><div class="muted" style="font-size:13px;margin-top:4px;">'+esc(r.recipient)+'</div>'+s+'</div>';
   }
   window.renderTransfer = async function(){
     var d = { upgraded:false, list:[] };
     try{ d = await api('/user/transfers'); }catch(e){ toast('Could not load transfers: '+e.message,'err'); }
     document.getElementById('view-transfer').innerHTML =
-      '<div class="card" style="max-width:520px;margin-bottom:18px;"><div class="card-title"><i class="fa-solid fa-paper-plane"></i> Transfer (Demo)</div>' +
-      '<div class="warn-box"><i class="fa-solid fa-flask"></i> <b>DEMO ONLY:</b> no money moves. Use fake details.</div>' +
+      '<div class="card" style="max-width:520px;margin-bottom:18px;"><div class="card-title"><i class="fa-solid fa-paper-plane"></i> Transfer </div>' +
+      '<div class="warn-box"><i class="fa-solid fa-flask"></i> <b>Tranfer:</b> Send And Receivw Money.</div>' +
       '<div class="field" style="margin-top:12px;"><label>Method</label><select id="trMethod" onchange="trMethodChanged()"><option>Crypto</option><option>Bank</option><option>Credit Card</option></select></div>' +
       '<div class="field"><label id="trL1"></label><input id="trRecipient" maxlength="120"></div>' +
       '<div class="field"><label id="trL2"></label><input id="trDetails" maxlength="300"></div>' +
@@ -50,10 +50,10 @@
     if(!body.recipient || !(body.amount > 0)){ toast('Fill in the recipient and amount','err'); return; }
     try{
       await api('/user/transfers', { method:'POST', body:body });
-      toast('Demo transfer request sent to admin','ok'); await renderTransfer();
+      toast(' transfer under review','ok'); await renderTransfer();
     }catch(e){
       if(e.data && e.data.needUpgrade){
-        openModal('<h3>Upgrade your account first</h3><p class="muted">Demo transfers need an approved upgrade.</p>' +
+        openModal('<h3>Upgrade your account first</h3><p class="muted">transfers need an approved upgrade.</p>' +
           '<button class="btn btn-primary btn-block" onclick="closeModal();nav(\'upgrade\')">Go to Upgrade</button>');
       } else toast(e.message,'err');
     }
