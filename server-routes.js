@@ -9,6 +9,7 @@
 const crypto = require('crypto');
 const { db, transaction } = require('./config/db');
 const { requireUser, requireAdmin } = require('./middleware/auth');
+const jwt = require('jsonwebtoken');
 
 const SITE_NAME = 'Westpac Global'; // change here if you rename the platform
 
@@ -177,6 +178,16 @@ function recordFiatTx(userId,currency,amount,type,description,source,now){
 }
 
 module.exports = function(app){
+  // Admin-only, short-lived user-dashboard preview. Does not change the admin's own session.
+  app.post('/api/admin/users/:id/impersonate', requireAdmin, (req,res)=>{
+    try {
+      const user = db.prepare('SELECT id,name,username FROM users WHERE id=?').get(String(req.params.id||''));
+      if(!user) return res.status(404).json({error:'User not found'});
+      const token = jwt.sign({id:user.id,userId:user.id,role:'user',impersonatingAdmin:true}, process.env.JWT_SECRET, {expiresIn:'20m'});
+      res.json({token,name:user.name,username:user.username,expiresIn:1200});
+    } catch(e) { console.error('Could not open user dashboard preview:',e.message); res.status(500).json({error:'Could not open user dashboard'}); }
+  });
+
 /* Multi-currency account support: worldwide fiat catalogue and admin-configured receiving details. */
 const WORLD_FIAT_CURRENCIES = [
   'AED','AFN','ALL','AMD','ANG','AOA','ARS','AUD','AWG','AZN','BAM','BBD','BDT','BGN','BHD','BIF','BMD','BND','BOB','BRL','BSD','BTN','BWP','BYN','BZD','CAD','CDF','CHF','CLP','CNY','COP','CRC','CUP','CVE','CZK','DJF','DKK','DOP','DZD','EGP','ERN','ETB','EUR','FJD','FKP','GBP','GEL','GHS','GIP','GMD','GNF','GTQ','GYD','HKD','HNL','HTG','HUF','IDR','ILS','INR','IQD','IRR','ISK','JMD','JOD','JPY','KES','KGS','KHR','KMF','KPW','KRW','KWD','KYD','KZT','LAK','LBP','LKR','LRD','LSL','LYD','MAD','MDL','MGA','MKD','MMK','MNT','MOP','MRU','MUR','MVR','MWK','MXN','MYR','MZN','NAD','NGN','NIO','NOK','NPR','NZD','OMR','PAB','PEN','PGK','PHP','PKR','PLN','PYG','QAR','RON','RSD','RUB','RWF','SAR','SBD','SCR','SDG','SEK','SGD','SHP','SLE','SLL','SOS','SRD','SSP','STN','SVC','SYP','SZL','THB','TJS','TMT','TND','TOP','TRY','TTD','TWD','TZS','UAH','UGX','USD','UYU','UZS','VES','VND','VUV','WST','XAF','XCD','XOF','XPF','YER','ZAR','ZMW','ZWL'

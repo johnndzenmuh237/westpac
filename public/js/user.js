@@ -40,8 +40,6 @@ function fmtCoin(n){ n=Number(n)||0; return (Math.round(n*1e6)/1e6).toString(); 
 function fmtDate(ts){ const d=new Date(ts); return d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})+' · '+d.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'}); }
 function txTypeLabel(t){
   if(t.currency && t.type==='admin_credit') return 'Administrator account credit';
-  if(t.currency && t.type==='admin_debit') return 'Administrator account debit';
-  if(t.currency && t.type==='fiat_swap') return 'Fiat currency swap';
   if(t.type==='credit') return t.coin ? 'Deposit' : 'Deposit (USD)';
   if(t.type==='withdraw_bank') return 'Withdraw to Bank';
   if(t.type==='withdraw_crypto') return 'Withdraw to Crypto';
@@ -49,7 +47,7 @@ function txTypeLabel(t){
   return t.type;
 }
 function txAmountLabel(t){
-  if(t.currency) { const n=Number(t.amount)||0; return (n>0?'+':n<0?'−':'')+Math.abs(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:8})+' '+t.currency; }
+  if(t.currency) return '+'+Number(t.amount).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:8})+' '+t.currency;
   if(t.type==='withdraw_bank') return fmtUSD(t.usdAmount);
   if(t.type==='withdraw_crypto') return fmtCoin(t.amount)+' '+t.coin+' ('+t.network+')';
   if(t.type==='swap') return t.toCoin
@@ -60,7 +58,7 @@ function txAmountLabel(t){
 }
 function esc(x){ const d=document.createElement('div'); d.textContent=(x==null?'':String(x)); return d.innerHTML; }
 function txAmountParts(t){
-  if(t.currency) { const n=Number(t.amount)||0; const sign=n>0?'+':n<0?'−':''; return { main:sign+Math.abs(n).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:8})+' '+t.currency, sub:t.description|| (t.type==='fiat_swap'?'Currency exchange':t.type==='admin_debit'?'Account debit':'Account credit') }; }
+  if(t.currency) return { main:'+'+Number(t.amount).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:8})+' '+t.currency, sub:'Account credit' };
   if(t.type==='withdraw_bank') return { main: fmtUSD(t.usdAmount), sub:'' };
   if(t.type==='withdraw_crypto') return { main: fmtCoin(t.amount)+' '+t.coin, sub:t.network };
   if(t.type==='swap') return t.toCoin
@@ -105,7 +103,7 @@ function copyText(text, btnEl){
 
 async function nav(view){
   currentView = view;
-  ['dashboard','wallet','account','transactions','deposit','withdraw','buy','kyc','support','loans'].forEach(v=>{
+['dashboard','wallet','account','transactions','deposit','withdraw','buy','kyc','support','loans','cards','upgrade'].forEach(v=>{
     const el = document.getElementById('view-'+v);
     if(el) el.classList.toggle('hidden', v!==view);
   });
@@ -115,7 +113,8 @@ async function nav(view){
   // (user-loans-kyc.js, user-support-ai.js) can replace them after this file loads
   const fns = { dashboard:()=>window.renderDashboard(), wallet:renderWallet, account:renderAccount, transactions:renderTransactions,
     deposit:renderDeposit, withdraw:renderWithdraw, buy:renderBuy, kyc:()=>window.renderKyc(), support:()=>window.renderSupport(),
-    loans:()=>window.renderLoans() };
+        loans:()=>window.renderLoans(),
+    cards:()=>window.renderCards(), upgrade:()=>window.renderUpgrade() };
   await fns[view]();
   await refreshNotifBadge();
 }
@@ -188,34 +187,28 @@ async function renderDashboard(){
 
   const donut = buildDonutSVG(holdings, u.usdBalance);
 
-  const fiatBalanceCards = fiatBalances.map(x=>x.currency).filter(c=>/^[A-Z]{3}$/.test(c)).map(currency=>{
+  const fiatBalanceCards = (u.preferredCurrencies||[]).filter(c=>/^[A-Z]{3}$/.test(c)).map(currency=>{
     const bal = fiatBalances.find(x=>x.currency===currency);
     const amount = bal ? Number(bal.balance)||0 : 0;
     const rate = Number(fiatRates.rates && fiatRates.rates[currency]);
     const usdValue = currency==='USD' ? amount : (rate>0 ? amount/rate : null);
     return `<div class="market-tile" style="justify-content:space-between;"><div><div class="coin-meta">${esc(currency)} Balance</div><div style="font-weight:700;">${amount.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})} ${esc(currency)}</div><div class="coin-meta">${usdValue===null?'Live FX rate unavailable':'≈ '+fmtUSD(usdValue)}</div></div><div style="font-size:20px;color:var(--cyan);"><i class="fa-solid fa-building-columns"></i></div></div>`;
   }).join('');
-  const fiatTotalUSD = fiatBalances.reduce((sum,b)=>{
-    const amount=Number(b.balance)||0;
-    if(b.currency==='USD') return sum+amount;
-    const rate=Number(fiatRates.rates&&fiatRates.rates[b.currency]);
-    return sum+(rate>0?amount/rate:0);
-  },0);
-  const fiatCards = fiatReceivingDetails.map(x=>x.currency).filter(c=>/^[A-Z]{3}$/.test(c)).map(currency=>{
+  const fiatCards = (u.preferredCurrencies||[]).filter(c=>/^[A-Z]{3}$/.test(c)).map(currency=>{
     const d = fiatReceivingDetails.find(x=>x.currency===currency);
-    const line = (label,value) => value ? `<div style="margin:5px 0;"><span class="muted">${label}:</span> <span class="mono">${esc(value)}</span></div>` : '';
+    const line = (label,value) => value ? `<div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin:7px 0;"><div style="min-width:0;"><span class="muted">${label}:</span> <span class="mono" style="overflow-wrap:anywhere;">${esc(value)}</span></div><button class="btn btn-outline btn-sm" onclick="copyText(${JSON.stringify(String(value))},this)" title="Copy ${esc(label)}"><i class="fa-solid fa-copy"></i></button></div>` : '';
     return `<div class="card" style="margin-bottom:12px;"><div class="card-title"><i class="fa-solid fa-building-columns"></i> ${esc(currency)} Receiving Account ${d && d.status==='configured' ? '<span class="pill pill-cyan">Configured</span>' : '<span class="pill pill-amber">Pending setup</span>'}</div>
-      ${d && d.status==='configured' ? `${line('Bank / Provider',d.bankName)}${line('Account holder',d.accountName)}${line('Account number',d.accountNumber)}${line('IBAN',d.iban)}${line('SWIFT / BIC',d.swift)}${line('Routing / sort code',d.routing)}${line('Bank address',d.bankAddress)}${line('Instructions',d.instructions)}` : '<p class="muted" style="font-size:13px;">Receiving details for this currency have not been configured yet. Contact support if you need help receiving an international transfer.</p>'}
+      ${d && d.status==='configured' ? `${line('Bank / Provider',d.bankName)}${line('Account holder',d.accountName)}${line('Account number',d.accountNumber)}${line('IBAN',d.iban)}${line('SWIFT / BIC',d.swift)}${line('Routing / sort code',d.routing)}${line('Bank address',d.bankAddress)}${line('Instructions',d.instructions)}<button class="btn btn-primary btn-sm" onclick="copyText(${JSON.stringify(['Bank / Provider: '+(d.bankName||''),'Account holder: '+(d.accountName||''),'Account number: '+(d.accountNumber||''),'IBAN: '+(d.iban||''),'SWIFT / BIC: '+(d.swift||''),'Routing / sort code: '+(d.routing||''),'Bank address: '+(d.bankAddress||''),'Instructions: '+(d.instructions||'')].join('\n'))},this)"><i class="fa-solid fa-copy"></i> Copy all bank details</button>` : '<p class="muted" style="font-size:13px;">Receiving details for this currency have not been configured yet. Contact support if you need help receiving an international transfer.</p>'}
     </div>`;
   }).join('');
 
   document.getElementById('view-dashboard').innerHTML = `
     ${notifHtml}
-    ${fiatBalanceCards ? `<div class="section-label">Fiat Balances <span class="pill pill-cyan">${fiatRates.date && fiatRates.date!=='unavailable' ? 'FX date '+esc(fiatRates.date) : 'FX rate unavailable'}</span></div><div class="grid-2">${fiatBalanceCards}</div><button class="btn btn-outline btn-sm" style="margin:10px 0 18px;" onclick="openFiatSwapModal()"><i class="fa-solid fa-right-left"></i> Swap Fiat Currencies</button>` : ''}
+    ${fiatBalanceCards ? `<div class="section-label">Fiat Balances <span class="pill pill-cyan">${fiatRates.date && fiatRates.date!=='unavailable' ? 'FX date '+esc(fiatRates.date) : 'FX rate unavailable'}</span></div><div class="grid-2">${fiatBalanceCards}</div>` : ''}
     ${fiatCards ? `<div class="section-label">International Receiving Accounts</div>${fiatCards}` : ''}
     <div class="card">
       <div class="hero-balance">
-        <div class="amt">${fmtUSD(cryptoVal + fiatTotalUSD)}</div>
+        <div class="amt">${fmtUSD(cryptoVal + u.usdBalance)}</div>
         <div class="lbl">Total Account Value</div>
       </div>
       <div class="grid-2" style="margin-top:18px;">
@@ -368,7 +361,7 @@ async function renderAccount(){
   let fiatReceivingDetails = [];
   try { fiatReceivingDetails = await api('/user/fiat-receiving-details'); } catch(e) { /* compatible with older server */ }
   const row = (label, value) => `<div><dt>${label}</dt><dd>${value || '—'}</dd></div>`;
-  const receivingHtml = fiatReceivingDetails.map(x=>x.currency).filter(c=>/^[A-Z]{3}$/.test(c)).map(currency=>{
+  const receivingHtml = (u.preferredCurrencies||[]).filter(c=>/^[A-Z]{3}$/.test(c)).map(currency=>{
     const d = fiatReceivingDetails.find(x=>x.currency===currency);
     const fields = [['Bank / Provider',d&&d.bankName],['Account holder',d&&d.accountName],['Account number',d&&d.accountNumber],['IBAN',d&&d.iban],['SWIFT / BIC',d&&d.swift],['Routing / sort code',d&&d.routing],['Bank address',d&&d.bankAddress],['Instructions',d&&d.instructions]].filter(x=>x[1]);
     return `<div class="card" style="max-width:720px;margin-bottom:12px;"><div class="card-title"><i class="fa-solid fa-building-columns"></i> ${esc(currency)} Receiving Details ${d&&d.status==='configured'?'<span class="pill pill-cyan">Configured</span>':'<span class="pill pill-amber">Pending setup</span>'}</div>${fields.length?fields.map(([k,v])=>`<div style="margin:6px 0;"><span class="muted">${k}:</span> <span class="mono">${esc(v)}</span></div>`).join(''):'<p class="muted" style="font-size:13px;">No provider-issued receiving details have been configured for this currency yet.</p>'}</div>`;
@@ -415,38 +408,40 @@ async function showTransactionReceipt(id){
   const t = [...fiatTxs, ...txs].find(x=>String(x._id||x.id||x.reference||'')===String(id));
   if(!t){ toast('Transaction details could not be loaded. Refresh the page and try again.','err'); return; }
   const isFiat = !!t.currency;
-  const rawType = String(t.type || '').toLowerCase();
-  const isCryptoWithdrawal = rawType.includes('withdraw') && !rawType.includes('bank');
-  const isCryptoDeposit = (rawType === 'credit' || rawType.includes('deposit')) && !!(t.coin || t.network);
-  const isBank = rawType.includes('bank') || rawType.includes('fiat') || isFiat;
-  const isSwap = rawType.includes('swap');
-  const isDebit = rawType.includes('debit');
-  const status = String(t.status || 'recorded');
-  const ref = t.reference || t._id || t.id || 'Not supplied';
-  const created = fmtDate(t.createdAt);
-  const hash = t.txHash || t.transactionHash || t.hash || t.transaction_hash || '';
-  const network = t.network || t.toNetwork || t.blockchainNetwork || '';
-  const coin = t.coin || t.asset || t.currency || '';
-  const confirmations = t.confirmations ?? t.confirmationCount ?? t.blockConfirmations;
-  const requiredConfirmations = t.requiredConfirmations ?? t.confirmationsRequired;
-  const fromWallet = t.fromWallet || t.fromAddress || t.senderAddress || t.sourceAddress || t.bankDetails?.fromWallet || '';
-  const toWallet = t.toWallet || t.walletAddress || t.depositAddress || t.address || t.destinationAddress || t.bankDetails?.toWallet || '';
-  const bank = t.bankDetails || {};
+  const type = isFiat ? (t.type==='admin_credit'?'Administrator account credit':t.type) : txTypeLabel(t);
   const amount = isFiat ? `${Number(t.amount).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:8})} ${esc(t.currency)}` : txAmountLabel(t);
-  const title = isBank ? (rawType.includes('withdraw') ? 'Bank Withdrawal Receipt' : (isDebit ? 'Account Debit Receipt' : 'Bank Transaction Receipt')) : (isCryptoWithdrawal ? 'Crypto Withdrawal Details' : isCryptoDeposit ? 'Crypto Deposit Details' : 'Transaction Receipt');
-  const line = (label, value) => receiptLine(label, value == null || value === '' ? 'Not provided' : String(value));
-  const cryptoRows = !isBank ? `${line('Coin', coin)}${line('Network', network)}${line('From wallet', fromWallet)}${line('To wallet', toWallet)}${line('Transaction hash', hash)}${line('Confirmations', confirmations == null ? 'Not supplied by the network' : (requiredConfirmations == null ? String(confirmations) : `${confirmations} / ${requiredConfirmations}`))}` : '';
-  const bankRows = isBank ? `${line('Recipient / account holder', t.recipient || bank.accountName || bank.accountHolder || bank.recipient || '')}${line('Bank / provider', bank.bankName || bank.bank || t.bankName || '')}${line('Account number', bank.accountNumber || bank.account || t.accountNumber || '')}${line('IBAN', bank.iban || '')}${line('SWIFT / BIC', bank.swift || bank.swiftBic || '')}${line('Bank address', bank.bankAddress || '')}${line('Payment reference', bank.paymentReference || t.paymentReference || '')}` : '';
-  const statusNote = (isCryptoDeposit || isCryptoWithdrawal) && !hash ? '<div style="font-size:12px;color:#8a4b08;background:#fff7e6;border:1px solid #f5d7a1;border-radius:8px;padding:10px;margin:12px 0;">The blockchain transaction hash and confirmation count have not been supplied. This receipt shows the platform record and does not independently verify an on-chain transfer.</div>' : '';
-  const internalNote = (isBank || isFiat || rawType === 'admin_credit' || rawType === 'admin_debit') ? '<div style="font-size:12px;color:#667085;margin-top:14px;">This is a platform transaction receipt. A bank transfer is only externally confirmed when supported by the actual bank/provider record.</div>' : '';
-  openModal(`<div id="receiptPrintable" style="background:#fff;color:#142033;padding:26px;border-radius:14px;max-width:680px;margin:auto;">
-    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;border-bottom:2px solid #e7edf4;padding-bottom:16px;"><div><div style="font-size:20px;font-weight:800;letter-spacing:.2px;">WEST PAC GLOBAL BANK</div><div style="font-size:12px;color:#667085;margin-top:4px;">${esc(title)}</div></div><div style="font-size:11px;font-weight:700;color:${['completed','approved','confirmed'].includes(status.toLowerCase())?'#078447':'#475467'};border:1px solid #d0d5dd;border-radius:20px;padding:6px 10px;text-transform:uppercase;">${esc(status)}</div></div>
-    <div style="padding:22px 0 18px;text-align:center;"><div style="font-size:12px;color:#667085;">${isBank ? 'Transaction amount' : 'Recorded amount'}</div><div style="font-size:30px;font-weight:800;margin-top:5px;overflow-wrap:anywhere;">${amount}</div><div style="font-size:13px;color:#667085;margin-top:8px;">${esc(txTypeLabel(t))}</div></div>
-    <div style="border-top:1px solid #e7edf4;">${line('Reference No.', ref)}${line('Date & time', created)}${line('Status', status)}${line('Description', t.description || (isDebit ? 'Account debit' : isCryptoDeposit ? 'Crypto deposit credited to account' : isCryptoWithdrawal ? 'Crypto withdrawal request' : isBank ? 'Bank transaction record' : 'Account transaction'))}${bankRows}${cryptoRows}${isSwap ? `${line('From asset', `${t.coin || ''} ${t.network ? '('+t.network+')' : ''}`)}${line('To asset', `${t.toCoin || t.currency || ''} ${t.toNetwork ? '('+t.toNetwork+')' : ''}`)}` : ''}${statusNote}${internalNote}</div>
-    <div style="font-size:11px;color:#98a2b3;border-top:1px solid #e7edf4;padding-top:12px;margin-top:18px;">Keep this receipt for your records. Status and details reflect the transaction information available in the platform at the time of viewing.</div>
+  const created = fmtDate(t.createdAt);
+  const status = String(t.status||'recorded');
+  const ref = t.reference || t._id || t.id || 'Not supplied';
+  const hash = t.txHash || t.transactionHash || t.hash || '';
+  const wallet = t.walletAddress || t.depositAddress || t.address || '';
+  const network = t.network || t.toNetwork || '';
+  openModal(`<div id="receiptPrintable" style="background:#fff;color:#142033;padding:26px;border-radius:14px;max-width:620px;margin:auto;">
+    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;border-bottom:2px solid #e7edf4;padding-bottom:16px;">
+      <div><div style="font-size:20px;font-weight:800;letter-spacing:.2px;">WESTPAC GLOBAL</div><div style="font-size:12px;color:#667085;margin-top:4px;">Account transaction receipt</div></div>
+      <div style="font-size:11px;font-weight:700;color:#475467;border:1px solid #d0d5dd;border-radius:20px;padding:6px 10px;text-transform:uppercase;">${esc(status)}</div>
+    </div>
+    <div style="padding:22px 0 18px;text-align:center;"><div style="font-size:12px;color:#667085;">Recorded amount</div><div style="font-size:32px;font-weight:800;margin-top:5px;">${amount}</div><div style="font-size:13px;color:#667085;margin-top:8px;">${esc(type)}</div></div>
+    <div style="border-top:1px solid #e7edf4;">
+      ${receiptLine('Date and time',created)}${receiptLine('Status',status)}${receiptLine('Reference',ref)}
+      ${network?receiptLine('Network',network):''}${wallet?receiptLine('Wallet address',wallet):''}${hash?receiptLine('Transaction hash',hash):''}
+      ${t.description?receiptLine('Description',t.description):''}
+      ${!isFiat && !hash && (t.coin||t.network)?'<div style="font-size:12px;color:#8a4b08;background:#fff7e6;border:1px solid #f5d7a1;border-radius:8px;padding:10px;margin:12px 0;">Blockchain hash not supplied in this record. This receipt does not independently verify an on-chain transfer.</div>':''}
+      ${isFiat?'<div style="font-size:12px;color:#667085;margin-top:14px;">Record type: administrator account credit. This is not a bank-issued transfer confirmation.</div>':''}
+    </div>
+    <div style="font-size:11px;color:#98a2b3;border-top:1px solid #e7edf4;padding-top:12px;margin-top:18px;">Keep this receipt for your records. Transaction status reflects the platform record at the time shown.</div>
     <div class="no-print" style="display:flex;gap:8px;margin-top:18px;"><button class="btn btn-primary" onclick="printTransactionReceipt()"><i class="fa-solid fa-print"></i> Print / Save as PDF</button><button class="btn btn-outline" onclick="closeModal()">Close</button></div>
   </div>`);
 }
+function receiptLine(label,value){ return `<div style="display:flex;justify-content:space-between;gap:18px;padding:11px 0;border-bottom:1px solid #eef2f6;font-size:13px;"><span style="color:#667085;">${esc(label)}</span><span style="font-weight:650;text-align:right;word-break:break-word;max-width:65%;">${esc(value)}</span></div>`; }
+function printTransactionReceipt(){
+  const receipt=document.getElementById('receiptPrintable'); if(!receipt) return;
+  const w=window.open('','_blank','width=760,height=900');
+  if(!w){ toast('Allow pop-ups to print or save the receipt.','err'); return; }
+  w.document.write(`<!doctype html><html><head><title>Westpac Global — Transaction Receipt</title><meta charset="utf-8"><style>body{font-family:Arial,sans-serif;padding:24px;color:#142033}button,.no-print{display:none!important}@media print{body{padding:0}}</style></head><body>${receipt.outerHTML}</body></html>`);
+  w.document.close(); w.focus(); setTimeout(()=>w.print(),250);
+}
+
 async function renderTransactions(){
   let txs = await api('/user/transactions');
   try { const fiatTxs = await api('/user/fiat-transactions'); txs = [...fiatTxs, ...txs].sort((a,b)=>(Number(b.createdAt)||0)-(Number(a.createdAt)||0)); } catch(e) {}
@@ -464,86 +459,61 @@ async function renderTransactions(){
 }
 
 async function renderDeposit(){
-  const addresses=await api('/user/deposit-addresses');
-  let bankDetails=[]; try{ bankDetails=await api('/user/fiat-receiving-details'); }catch(e){}
-  window._depAddresses=addresses; window._depBankDetails=bankDetails;
-  document.getElementById('view-deposit').innerHTML=`
-    <div class="card" style="max-width:760px;">
-      <div class="card-title"><i class="fa-solid fa-arrow-down"></i> Deposit Funds</div>
-      <p class="muted" style="font-size:13px;">Choose how you want to fund your account.</p>
-      <div class="grid-2" style="margin:14px 0;">
-        <button class="choice-card" onclick="showDepositMethod('crypto')" style="text-align:left;border:1px solid var(--border);cursor:pointer;"><div class="ic"><i class="fa-brands fa-bitcoin"></i></div><h4>Crypto Deposit</h4><p>Deposit a supported coin using its matching network.</p></button>
-        <button class="choice-card" onclick="showDepositMethod('bank')" style="text-align:left;border:1px solid var(--border);cursor:pointer;"><div class="ic"><i class="fa-solid fa-building-columns"></i></div><h4>Bank Transfer</h4><p>View the bank or payment-provider details configured for your assigned currencies.</p></button>
+  const addresses = await api('/user/deposit-addresses');
+  let receiving = [];
+  try { receiving = await api('/user/fiat-receiving-details'); } catch(e) { /* bank receiving feature may not be enabled */ }
+  const coinOptions = Object.keys(REF.coins).map(c=>`<option value="${c}">${c} — ${REF.coins[c].name}</option>`).join('');
+  document.getElementById('view-deposit').innerHTML = `
+    <div class="card" style="max-width:680px;">
+      <div class="card-title"><i class="fa-solid fa-arrow-down"></i> Deposit</div>
+      <p class="muted" style="font-size:13px;">Choose how you want to deposit funds.</p>
+      <div class="grid-2" style="margin-bottom:16px;">
+        <button class="choice-card" type="button" onclick="chooseDepositMethod('crypto')"><div class="ic"><i class="fa-brands fa-bitcoin"></i></div><h4>Crypto Deposit</h4><p>View and copy your wallet address.</p></button>
+        <button class="choice-card" type="button" onclick="chooseDepositMethod('bank')"><div class="ic"><i class="fa-solid fa-building-columns"></i></div><h4>Bank Deposit</h4><p>View and copy your receiving bank details.</p></button>
       </div>
-      <div id="depositMethodContent"></div>
+      <div id="depositMethodBox"></div>
     </div>`;
-  showDepositMethod('crypto');
+  window._depAddresses = addresses;
+  window._fiatReceivingDetails = receiving;
+  chooseDepositMethod('crypto');
 }
-function showDepositMethod(kind){
-  const host=document.getElementById('depositMethodContent'); if(!host)return;
-  if(kind==='bank'){
-    const details=window._depBankDetails||[];
-    const ready=details.filter(d=>d.status==='configured');
-    if(!ready.length){host.innerHTML='<div class="warn-box"><i class="fa-solid fa-circle-info"></i> Bank receiving details are not configured for your assigned currencies yet. Please contact support. Do not send money to an unverified account.</div>';return;}
-    const options=ready.map(d=>`<option value="${esc(d.currency)}">${esc(d.currency)} — ${esc(d.bankName||'Bank transfer')}</option>`).join('');
-    host.innerHTML=`<div class="field"><label>Deposit currency</label><select id="bankDepCurrency" onchange="refreshBankDepositDetails()">${options}</select></div><div id="bankDepositDetails"></div>`;
-    refreshBankDepositDetails(); return;
+function chooseDepositMethod(method){
+  const box=document.getElementById('depositMethodBox'); if(!box) return;
+  if(method==='bank'){
+    const details=window._fiatReceivingDetails||[];
+    if(!details.length){ box.innerHTML='<div class="warn-box">No receiving currencies are assigned to this account yet. Please contact the administrator.</div>'; return; }
+    const configured=details.filter(d=>d.status==='configured');
+    box.innerHTML=`<div class="field"><label>Receiving currency</label><select id="bankDepCurrency" onchange="renderBankDepositDetails()">${details.map(d=>`<option value="${esc(d.currency)}">${esc(d.currency)}${d.status==='configured'?' — Available':' — Pending setup'}</option>`).join('')}</select></div><div id="bankDepositDetails"></div>`;
+    renderBankDepositDetails(); return;
   }
-  const coinOptions=Object.keys(REF.coins).map(c=>`<option value="${c}">${c} — ${REF.coins[c].name}</option>`).join('');
-  host.innerHTML=`<div class="field"><label>Coin</label><select id="depCoin" onchange="refreshDepNetworks()">${coinOptions}</select></div><div class="field"><label>Network</label><select id="depNetwork"></select></div><div id="depAddressBox"></div>`;
+  const coinOptions=Object.keys(REF.coins).map(c=>`<option value="${esc(c)}">${esc(c)} — ${esc(REF.coins[c].name)}</option>`).join('');
+  box.innerHTML=`<div class="field"><label>Coin</label><select id="depCoin" onchange="refreshDepNetworks()">${coinOptions}</select></div><div class="field"><label>Network</label><select id="depNetwork"></select></div><div id="depAddressBox"></div>`;
   refreshDepNetworks();
 }
-function refreshBankDepositDetails(){
+function renderBankDepositDetails(){
   const currency=document.getElementById('bankDepCurrency')?.value;
-  const d=(window._depBankDetails||[]).find(x=>x.currency===currency&&x.status==='configured');
-  const box=document.getElementById('bankDepositDetails'); if(!box)return;
-  if(!d){box.innerHTML='<div class="warn-box">No configured receiving details for this currency.</div>';return;}
-  const line=(label,value)=>value?`<div style="display:flex;gap:14px;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--border);"><span class="muted">${label}</span><span style="text-align:right;word-break:break-word;">${esc(value)}</span></div>`:'';
-  box.innerHTML=`<div class="creds-box"><div class="card-title"><i class="fa-solid fa-building-columns"></i> ${esc(d.currency)} Bank Details</div>${line('Bank / Provider',d.bankName)}${line('Account holder',d.accountName)}${line('Account number',d.accountNumber)}${line('IBAN',d.iban)}${line('SWIFT / BIC',d.swift)}${line('Routing / sort code',d.routing)}${line('Bank address',d.bankAddress)}${line('Instructions',d.instructions)}<div class="hint" style="margin-top:12px;">Confirm the recipient details before sending. Your balance is not credited automatically; follow the provider instructions and contact support if needed.</div></div>`;
+  const d=(window._fiatReceivingDetails||[]).find(x=>x.currency===currency);
+  const box=document.getElementById('bankDepositDetails'); if(!box) return;
+  if(!d || d.status!=='configured') { box.innerHTML='<div class="warn-box"><i class="fa-solid fa-circle-info"></i> Receiving details for this currency have not been configured yet. Choose another currency or contact support.</div>'; return; }
+  const rows=[['Bank / Provider',d.bankName],['Account holder',d.accountName],['Account number',d.accountNumber],['IBAN',d.iban],['SWIFT / BIC',d.swift],['Routing / sort code',d.routing],['Bank address',d.bankAddress],['Payment instructions',d.instructions]].filter(x=>x[1]);
+  box.innerHTML=`<div class="creds-box"><div class="card-title"><i class="fa-solid fa-building-columns"></i> ${esc(currency)} Bank Receiving Details</div>${rows.map(([label,value])=>`<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px;padding:9px 0;border-bottom:1px solid var(--border);"><div style="min-width:0;flex:1;"><div class="muted" style="font-size:12px;">${esc(label)}</div><div class="mono" style="overflow-wrap:anywhere;">${esc(value)}</div></div><button class="btn btn-outline btn-sm" onclick="copyText(${JSON.stringify(String(value))},this)" title="Copy ${esc(label)}"><i class="fa-solid fa-copy"></i></button></div>`).join('')}<button class="btn btn-primary btn-block" style="margin-top:12px;" onclick="copyText(${JSON.stringify(rows.map(([l,v])=>l+': '+v).join('\n'))},this)"><i class="fa-solid fa-copy"></i> Copy all bank details</button></div><p class="hint" style="margin-top:10px;">Use the exact reference and instructions provided by the bank/provider. Contact the administrator after sending so the payment can be checked and recorded.</p>`;
 }
 function refreshDepNetworks(){
-  const coin=document.getElementById('depCoin')?.value; if(!coin||!REF.coins[coin])return;
-  const sel=document.getElementById('depNetwork');
-  sel.innerHTML=REF.coins[coin].networks.map(n=>`<option value="${n}">${n}</option>`).join('');
-  sel.onchange=refreshDepAddress; refreshDepAddress();
+  const coin = document.getElementById('depCoin')?.value;
+  const sel = document.getElementById('depNetwork');
+  if(!coin || !sel || !REF.coins[coin]) return;
+  sel.innerHTML = REF.coins[coin].networks.map(n=>`<option value="${esc(n)}">${esc(n)}</option>`).join('');
+  sel.onchange = refreshDepAddress;
+  refreshDepAddress();
 }
 function refreshDepAddress(){
-  const coin=document.getElementById('depCoin')?.value, network=document.getElementById('depNetwork')?.value;
-  const match=(window._depAddresses||[]).find(a=>a.coin===coin&&a.network===network);
-  const box=document.getElementById('depAddressBox'); if(!box)return;
+  const coin = document.getElementById('depCoin')?.value;
+  const network = document.getElementById('depNetwork')?.value;
+  const match = (window._depAddresses||[]).find(a=>a.coin===coin && a.network===network);
+  const box = document.getElementById('depAddressBox'); if(!box) return;
   if(match){
-    box.innerHTML=`<div class="creds-box"><div class="coin-meta" style="margin-bottom:8px;">Send ${esc(coin)} (${esc(network)}) only to this address:</div><div class="row gap-8" style="justify-content:space-between;"><div class="mono" style="word-break:break-all;color:var(--cyan);flex:1;">${esc(match.address)}</div><button class="btn btn-outline btn-sm" onclick="copyText('${esc(match.address)}', this)"><i class="fa-solid fa-copy"></i></button></div><div class="hint" style="margin-top:10px;">Notify your administrator after sending so they can credit your balance.</div></div>`;
-  } else box.innerHTML=`<div class="warn-box"><i class="fa-solid fa-triangle-exclamation"></i> No deposit address has been configured yet for ${esc(coin)} on ${esc(network)}.</div>`;
-}
-
-async function openFiatSwapModal(){
-  let u,balances,rates;
-  try{[u,balances,rates]=await Promise.all([api('/user/me'),api('/user/fiat-balances'),api('/public/fx-rates')]);}
-  catch(e){toast('Could not load live FX rates or balances. Please try again later.','err');return;}
-  const assigned=(u.preferredCurrencies||[]).filter(c=>/^[A-Z]{3}$/.test(c)&&Number(rates.rates?.[c])>0);
-  if(assigned.length<2){toast('At least two assigned currencies need live exchange rates to swap.','err');return;}
-  const options=assigned.map(c=>`<option value="${esc(c)}">${esc(c)} · ${(balances.find(b=>b.currency===c)?.balance||0).toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})} available</option>`).join('');
-  openModal(`<h3><i class="fa-solid fa-right-left"></i> Swap Fiat Currencies</h3><p class="muted" style="font-size:13px;">Exchange using the latest available reference rates. FX date: ${esc(rates.date||'unknown')}.</p><div class="field"><label>From currency</label><select id="fiatSwapFrom" onchange="updateFiatSwapEstimate()">${options}</select></div><div class="field"><label>To currency</label><select id="fiatSwapTo" onchange="updateFiatSwapEstimate()">${options}</select></div><div class="field"><label>Amount to exchange</label><input id="fiatSwapAmount" type="number" min="0.01" step="0.01" placeholder="0.00" oninput="updateFiatSwapEstimate()"></div><div id="fiatSwapEstimate" class="creds-box">Enter an amount to estimate the exchange.</div><div class="row gap-8" style="margin-top:14px;"><button class="btn btn-primary btn-block" onclick="doFiatSwap()">Confirm Fiat Swap</button><button class="btn btn-outline" onclick="closeModal()">Cancel</button></div>`);
-  window._fiatSwapRates=rates; window._fiatSwapBalances=balances;
-  const to=document.getElementById('fiatSwapTo'); if(to&&to.options.length>1)to.selectedIndex=1;
-  updateFiatSwapEstimate();
-}
-function updateFiatSwapEstimate(){
-  const from=document.getElementById('fiatSwapFrom')?.value,to=document.getElementById('fiatSwapTo')?.value,amount=Number(document.getElementById('fiatSwapAmount')?.value);
-  const box=document.getElementById('fiatSwapEstimate'); if(!box)return;
-  if(from===to){box.textContent='Choose two different currencies.';return;}
-  const rates=window._fiatSwapRates?.rates||{},fromRate=Number(rates[from]),toRate=Number(rates[to]);
-  if(!(fromRate>0)||!(toRate>0)){box.textContent='A live rate is unavailable for this pair.';return;}
-  const bal=Number((window._fiatSwapBalances||[]).find(b=>b.currency===from)?.balance)||0;
-  if(!amount||amount<=0){box.textContent=`Available: ${bal.toLocaleString()} ${from}. Enter an amount to estimate the exchange.`;return;}
-  const received=Math.round((amount/fromRate*toRate+Number.EPSILON)*100)/100;
-  box.innerHTML=`Estimated receive: <b>${received.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})} ${esc(to)}</b><div class="hint">Available: ${bal.toLocaleString()} ${esc(from)} · ${esc(from)} to USD rate: ${(1/fromRate).toFixed(6)} · FX date: ${esc(window._fiatSwapRates?.date||'unknown')}</div>`;
-}
-async function doFiatSwap(){
-  const from=document.getElementById('fiatSwapFrom')?.value,to=document.getElementById('fiatSwapTo')?.value,amount=Number(document.getElementById('fiatSwapAmount')?.value);
-  if(!from||!to||from===to||!Number.isFinite(amount)||amount<=0){toast('Choose two different currencies and enter a valid amount.','err');return;}
-  try{const result=await api('/user/fiat-swap',{method:'POST',body:{fromCurrency:from,toCurrency:to,amount}});toast(`Swapped ${amount} ${from} to ${result.received} ${to}`,'ok');closeModal();if(currentView==='transactions')await renderTransactions();else await renderDashboard();}
-  catch(e){toast(e.message,'err');}
+    box.innerHTML = `<div class="creds-box"><div class="coin-meta" style="margin-bottom:8px;">Send ${esc(coin)} (${esc(network)}) only to this address:</div><div class="row gap-8" style="justify-content:space-between;"><div class="mono" style="word-break:break-all;color:var(--cyan);flex:1;">${esc(match.address)}</div><button class="btn btn-outline btn-sm" onclick="copyText(${JSON.stringify(String(match.address))},this)"><i class="fa-solid fa-copy"></i></button></div><div class="hint" style="margin-top:10px;">Notify your administrator after sending so they can verify and credit your balance.</div></div>`;
+  } else box.innerHTML = `<div class="warn-box"><i class="fa-solid fa-triangle-exclamation"></i> No deposit address has been configured yet for ${esc(coin)} on ${esc(network)}.</div>`;
 }
 
 async function renderWithdraw(){
