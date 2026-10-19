@@ -101,7 +101,7 @@ function toggleSidebar(open){
 
 async function nav(view, arg){
   currentView = view;
- ['overview','createuser','users','edituser','deposits','support','withdrawals','applications','loans','kycreq'].forEach(v=>{
+ ['overview','createuser','users','edituser','deposits','support','withdrawals','cards','upgrades','transfers'].forEach(v=>{
   const el = document.getElementById('view-'+v);
   if(el) el.classList.toggle('hidden', v!==view);
 });
@@ -115,9 +115,12 @@ async function nav(view, arg){
   if(view==='deposits') await renderDepositAddresses();
   if(view==='support') await renderSupportSettings();
   if(view==='withdrawals') await renderWithdrawals();
-   if(view==='applications') await renderApplications();
+  if(view==='applications') await renderApplications();
   if(view==='loans') await renderLoans();
   if(view==='kycreq') await renderKycRequests();
+  if(view==='cards') await window.renderCardRequests();
+  if(view==='upgrades') await window.renderUpgradeRequests();
+  if(view==='transfers') await window.renderTransferRequests();
   if(typeof refreshAppBadge==='function') refreshAppBadge();
 }
 setInterval(()=>{ if(currentView==='overview') renderOverview(); }, 30000);
