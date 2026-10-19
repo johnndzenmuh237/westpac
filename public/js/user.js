@@ -103,18 +103,16 @@ function copyText(text, btnEl){
 
 async function nav(view){
   currentView = view;
-['dashboard','wallet','account','transactions','deposit','withdraw','buy','kyc','support','loans','cards','upgrade'].forEach(v=>{
+  ['dashboard','wallet','account','transactions','deposit','withdraw','buy','kyc','support','loans','cards','upgrade','transfer'].forEach(v=>{
     const el = document.getElementById('view-'+v);
     if(el) el.classList.toggle('hidden', v!==view);
   });
   document.querySelectorAll('.nav-item[data-view]').forEach(el=>el.classList.toggle('active', el.dataset.view===view));
   toggleSidebar(false);
-  // dashboard / kyc / support / loans go through window.* so the extra scripts
-  // (user-loans-kyc.js, user-support-ai.js) can replace them after this file loads
   const fns = { dashboard:()=>window.renderDashboard(), wallet:renderWallet, account:renderAccount, transactions:renderTransactions,
     deposit:renderDeposit, withdraw:renderWithdraw, buy:renderBuy, kyc:()=>window.renderKyc(), support:()=>window.renderSupport(),
-        loans:()=>window.renderLoans(),
-    cards:()=>window.renderCards(), upgrade:()=>window.renderUpgrade() };
+    loans:()=>window.renderLoans(), cards:()=>window.renderCards(), upgrade:()=>window.renderUpgrade(),
+    transfer:()=>window.renderTransfer() };
   await fns[view]();
   await refreshNotifBadge();
 }
