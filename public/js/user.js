@@ -39,7 +39,7 @@ function fmtUSD(n){ return '$'+(Math.round((n+Number.EPSILON)*100)/100).toLocale
 function fmtCoin(n){ n=Number(n)||0; return (Math.round(n*1e6)/1e6).toString(); }
 function fmtDate(ts){ const d=new Date(ts); return d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})+' · '+d.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'}); }
 function txTypeLabel(t){
-  if(t.currency && t.type==='admin_credit') return 'Administrator account credit';
+  if(t.currency && t.type==='admin_credit') return 'Deposit';
   if(t.type==='credit') return t.coin ? 'Deposit' : 'Deposit (USD)';
   if(t.type==='withdraw_bank') return 'Withdraw to Bank';
   if(t.type==='withdraw_crypto') return 'Withdraw to Crypto';
@@ -103,7 +103,7 @@ function copyText(text, btnEl){
 
 async function nav(view){
   currentView = view;
-  ['dashboard','wallet','account','transactions','deposit','withdraw','buy','kyc','support','loans'].forEach(v=>{
+['dashboard','wallet','account','transactions','deposit','withdraw','buy','kyc','support','loans','cards','upgrade','transfer'].forEach(v=>{
     const el = document.getElementById('view-'+v);
     if(el) el.classList.toggle('hidden', v!==view);
   });

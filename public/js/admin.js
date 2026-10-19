@@ -101,7 +101,7 @@ function toggleSidebar(open){
 
 async function nav(view, arg){
   currentView = view;
- ['overview','createuser','users','edituser','deposits','support','withdrawals','cards','upgrades','transfers'].forEach(v=>{
+['overview','createuser','users','edituser','deposits','support','withdrawals','cards','upgrades','transfers','loans','kycreq','applications'].forEach(v=>{
   const el = document.getElementById('view-'+v);
   if(el) el.classList.toggle('hidden', v!==view);
 });
