@@ -112,7 +112,7 @@ async function nav(view){
   // dashboard / kyc / support / loans go through window.* so the extra scripts
   // (user-loans-kyc.js, user-support-ai.js) can replace them after this file loads
   const fns = { dashboard:()=>window.renderDashboard(), wallet:renderWallet, account:renderAccount, transactions:renderTransactions,
-    deposit:renderDeposit, withdraw:renderWithdraw, buy:renderBuy, kyc:()=>window.renderKyc(), support:()=>window.renderSupport(),
+    deposit:()=>window.renderDeposit(), withdraw:renderWithdraw, buy:renderBuy, kyc:()=>window.renderKyc(), support:()=>window.renderSupport(),
     loans:()=>window.renderLoans() };
   await fns[view]();
   await refreshNotifBadge();
