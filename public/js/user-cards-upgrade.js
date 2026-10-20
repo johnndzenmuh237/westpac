@@ -44,7 +44,7 @@
   function cardItem(r){
     CACHE['c'+r.id] = r;
     return '<div style="padding:14px 0;border-bottom:1px solid var(--border,#e6e8ef);">' +
-      '<div class="row gap-8" style="justify-content:space-between;"><div><b>'+esc(r.cardType)+' card</b> · '+esc(r.nameOnCard)+'</div><div class="muted" style="font-size:12.5px;">'+fmtDate(r.createdAt)+'</div></div>' +
+           '<div class="row gap-8" style="justify-content:space-between;"><div><b>'+esc(r.cardBrand||'')+' '+esc(r.cardType)+' card</b> · '+esc(r.nameOnCard)+'</div><div class="muted" style="font-size:12.5px;">'+fmtDate(r.createdAt)+'</div></div>' +
       '<div class="muted" style="font-size:13px;margin-top:4px;">'+esc(r.purpose)+'</div>' +
       statusBlock(r, 'cards', 'Your card request has been approved.', 'cardReapply') + '</div>';
   }
@@ -64,6 +64,7 @@
     document.getElementById('view-cards').innerHTML =
       '<div class="card" style="max-width:520px;margin-bottom:18px;"><div class="card-title"><i class="fa-solid fa-credit-card"></i> Request a Card</div>' +
         '<p class="muted" style="font-size:13px;">Request a card for your online transfers and transactions. Our team reviews every request. Never enter a card number, CVV or PIN here: we do not ask for them.</p>' +
+        '<div class="field"><label>Card network</label><select id="cardBrand"><option>Visa</option><option>Mastercard</option></select></div>' +
         '<div class="field"><label>Card type</label><select id="cardType" onchange="cardTypeChanged()"><option>Virtual</option><option>Physical</option></select></div>' +
         '<div class="field"><label>Name to appear on the card</label><input id="cardName" maxlength="60" value="'+esc(u.name||'')+'"></div>' +
         '<div class="field"><label>Phone number</label><input id="cardPhone" maxlength="30" value="'+esc(u.phoneNumber||'')+'"></div>' +
@@ -83,9 +84,9 @@
   };
   window.submitCard = async function(){
     var v = function(id){ var el = document.getElementById(id); return el ? el.value.trim() : ''; };
-    var body = { cardType:v('cardType'), nameOnCard:v('cardName'), phone:v('cardPhone'),
+      var body = { cardBrand:v('cardBrand'), cardType:v('cardType'), nameOnCard:v('cardName'), phone:v('cardPhone'),
       address:v('cardAddress'), city:v('cardCity'), country:v('cardCountry'), purpose:v('cardPurpose') };
-    if(!body.nameOnCard || !body.phone || !body.purpose){ toast('Please complete all required fields','err'); return; }
+    if(!body.cardBrand || !body.nameOnCard || !body.phone || !body.purpose){ toast('Please complete all required fields','err'); return; }
     if(body.cardType === 'Physical' && (!body.address || !body.city || !body.country)){ toast('Enter a delivery address for a physical card','err'); return; }
     try{
       await api('/user/cards', { method:'POST', body:body });
@@ -98,7 +99,7 @@
     await nav('cards');
     if(!r) return;
     var set = function(elId, val){ var el = document.getElementById(elId); if(el && val != null) el.value = val; };
-    set('cardType', r.cardType); cardTypeChanged();
+       set('cardBrand', r.cardBrand); set('cardType', r.cardType); cardTypeChanged();
     set('cardName', r.nameOnCard); set('cardPhone', r.phone); set('cardPurpose', r.purpose);
     set('cardAddress', r.address); set('cardCity', r.city); set('cardCountry', r.country);
     document.getElementById('cardType').scrollIntoView({ behavior:'smooth', block:'center' });

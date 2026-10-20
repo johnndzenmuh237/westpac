@@ -227,7 +227,7 @@
         '<div class="field"><label>Country that issued the ID</label><input id="kycIdCountry"></div>' +
         '<div class="field"><label>Residential address</label><input id="kycAddress"></div>' +
         '<div class="field"><label>Note <span class="muted" style="font-weight:500;">(optional)</span></label><input id="kycNote"></div>' +
-        '<button class="btn btn-primary btn-block" onclick="submitKycDetails()"><i class="fa-solid fa-paper-plane"></i> Send Details to Admin</button></div>';
+        '<button class="btn btn-primary btn-block" onclick="submitKycDetails()"><i class="fa-solid fa-paper-plane"></i> Submit</button></div>';
     } else if(st === 'submitted'){
       pill = '<span class="pill pill-amber"><i class="fa-solid fa-clock"></i> Under review</span>';
       body = '<div class="warn-box" style="margin-top:16px;"><i class="fa-solid fa-hourglass-half"></i> Your details have been sent. Our team is reviewing them and you will see the result here.</div>';

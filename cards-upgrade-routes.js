@@ -19,8 +19,14 @@ db.exec(`
   );
 `);
 
+// extra card column (safe to run repeatedly)
+['cardBrand TEXT'].forEach(function(c){
+  try{ db.exec('ALTER TABLE card_requests ADD COLUMN ' + c); }catch(e){ /* already exists */ }
+});
+
 const TIERS = ['Standard', 'Premium', 'Business'];
 const CARD_TYPES = ['Virtual', 'Physical'];
+const CARD_BRANDS = ['Visa', 'Mastercard'];
 const clean = (v, n) => String(v == null ? '' : v).trim().slice(0, n);
 
 function uidOf(req){
@@ -38,24 +44,22 @@ function uidOf(req){
 
 module.exports = function(app){
   /* ---------- USER: cards ---------- */
-  app.get('/api/user/cards', requireUser, (req, res) => {
-    res.json(db.prepare('SELECT * FROM card_requests WHERE userId=? ORDER BY createdAt DESC LIMIT 50').all(uidOf(req)));
-  });
-  app.post('/api/user/cards', requireUser, (req, res) => {
+   app.post('/api/user/cards', requireUser, (req, res) => {
     const uid = uidOf(req);
     if(!uid) return res.status(401).json({ error:'Not signed in' });
     const b = req.body || {};
-    const d = { cardType:clean(b.cardType,20), nameOnCard:clean(b.nameOnCard,60), phone:clean(b.phone,30),
+    const d = { cardBrand:clean(b.cardBrand,20), cardType:clean(b.cardType,20), nameOnCard:clean(b.nameOnCard,60), phone:clean(b.phone,30),
       address:clean(b.address,200), city:clean(b.city,80), country:clean(b.country,80), purpose:clean(b.purpose,300) };
+    if(!CARD_BRANDS.includes(d.cardBrand)) return res.status(400).json({ error:'Choose a card network.' });
     if(!CARD_TYPES.includes(d.cardType)) return res.status(400).json({ error:'Choose a card type.' });
     if(!d.nameOnCard || !d.phone || !d.purpose) return res.status(400).json({ error:'Please complete all required fields.' });
     if(d.cardType === 'Physical' && (!d.address || !d.city || !d.country))
       return res.status(400).json({ error:'A delivery address is required for a physical card.' });
     if(db.prepare("SELECT id FROM card_requests WHERE userId=? AND status='pending'").get(uid))
       return res.status(400).json({ error:'You already have a card request under review.' });
-    db.prepare(`INSERT INTO card_requests (id,userId,cardType,nameOnCard,phone,address,city,country,purpose,status,createdAt)
-      VALUES (?,?,?,?,?,?,?,?,?,?,?)`)
-      .run(crypto.randomUUID(), uid, d.cardType, d.nameOnCard, d.phone, d.address, d.city, d.country, d.purpose, 'pending', Date.now());
+    db.prepare(`INSERT INTO card_requests (id,userId,cardBrand,cardType,nameOnCard,phone,address,city,country,purpose,status,createdAt)
+      VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`)
+      .run(crypto.randomUUID(), uid, d.cardBrand, d.cardType, d.nameOnCard, d.phone, d.address, d.city, d.country, d.purpose, 'pending', Date.now());
     res.json({ ok:true });
   });
 

@@ -60,7 +60,7 @@
         var where = r.cardType === 'Physical' ? '<span class="sub">'+esc([r.address,r.city,r.country].filter(Boolean).join(', '))+'</span>' : '';
         return [
           '<span class="strong">'+esc(r.name||'—')+'</span><span class="sub mono">@'+esc(r.username||'')+'</span>',
-          '<b>'+esc(r.cardType)+'</b> · '+esc(r.nameOnCard)+'<span class="sub">'+esc(r.phone)+'</span>'+where,
+                    '<b>'+esc(r.cardBrand||'')+' '+esc(r.cardType)+'</b> · '+esc(r.nameOnCard)+'<span class="sub">'+esc(r.phone)+'</span>'+where,
           esc(r.purpose),
           '<span class="status-chip '+(CLS[r.status]||'')+'">'+esc(r.status)+'</span>',
           '<span class="muted">'+fmtDate(r.createdAt)+'</span>',
