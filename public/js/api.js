@@ -1,35 +1,26 @@
 const Session = {
+  // admin pages and user pages keep separate logins, so they never overwrite each other
+  get area() { return /admin/i.test(location.pathname) ? 'admin' : 'user'; },
+  get impersonating() { return sessionStorage.getItem('cg_imp') === '1'; },
+  _k(name) { return 'cg_' + name + '_' + this.area; },
+
   get token() {
-    return this.impersonating
-      ? sessionStorage.getItem('cg_token')
-      : localStorage.getItem('cg_token');
+    return this.impersonating ? sessionStorage.getItem('cg_token') : localStorage.getItem(this._k('token'));
   },
-
   get role() {
-    return this.impersonating
-      ? sessionStorage.getItem('cg_role')
-      : localStorage.getItem('cg_role');
+    return this.impersonating ? sessionStorage.getItem('cg_role')
+      : (localStorage.getItem(this._k('token')) ? localStorage.getItem(this._k('role')) : null);
   },
-
   get name() {
-    return this.impersonating
-      ? sessionStorage.getItem('cg_name')
-      : localStorage.getItem('cg_name');
-  },
-
-  get impersonating() {
-    return sessionStorage.getItem('cg_imp') === '1';
+    return this.impersonating ? sessionStorage.getItem('cg_name') : localStorage.getItem(this._k('name'));
   },
 
   set(token, role, name) {
-    localStorage.setItem('cg_token', token);
-    localStorage.setItem('cg_role', role);
-    localStorage.setItem('cg_name', name || '');
-
-    sessionStorage.removeItem('cg_token');
-    sessionStorage.removeItem('cg_role');
-    sessionStorage.removeItem('cg_name');
-    sessionStorage.removeItem('cg_imp');
+    var area = role === 'admin' ? 'admin' : 'user';
+    localStorage.setItem('cg_token_' + area, token);
+    localStorage.setItem('cg_role_' + area, role);
+    localStorage.setItem('cg_name_' + area, name || '');
+    ['token','role','name','imp'].forEach(function(k){ sessionStorage.removeItem('cg_' + k); });
   },
 
   setImpersonation(token, name) {
@@ -41,65 +32,39 @@ const Session = {
 
   clear() {
     if (this.impersonating) {
-      sessionStorage.removeItem('cg_token');
-      sessionStorage.removeItem('cg_role');
-      sessionStorage.removeItem('cg_name');
-      sessionStorage.removeItem('cg_imp');
+      ['token','role','name','imp'].forEach(function(k){ sessionStorage.removeItem('cg_' + k); });
       return;
     }
-
-    localStorage.removeItem('cg_token');
-    localStorage.removeItem('cg_role');
-    localStorage.removeItem('cg_name');
+    var self = this;
+    ['token','role','name'].forEach(function(n){ localStorage.removeItem(self._k(n)); });
   }
 };
 
-// Only these core calls decide that the session is really invalid.
-// A 401 from an optional call (loans, KYC status, Tawk...) must not log the user out.
 const CORE_PATHS = ['/user/me', '/user/reference', '/admin/reference', '/admin/users'];
 
 async function api(path, { method = 'GET', body } = {}) {
   const headers = { 'Content-Type': 'application/json' };
   const token = Session.token;
-
-  if (token) {
-    headers.Authorization = 'Bearer ' + token;
-  }
+  if (token) headers.Authorization = 'Bearer ' + token;
 
   const res = await fetch('/api' + path, {
-    method,
-    headers,
-    body: body ? JSON.stringify(body) : undefined
+    method, headers, body: body ? JSON.stringify(body) : undefined
   });
 
   let data = null;
-
-  try {
-    data = await res.json();
-  } catch (e) {
-    // The response may not contain JSON.
-  }
+  try { data = await res.json(); } catch (e) { /* no JSON body */ }
 
   if (!res.ok) {
     if (res.status === 401 && CORE_PATHS.includes(path.split('?')[0])) {
       const wasImpersonating = Session.impersonating;
-      const wasRole = Session.role;
-
+      const wasAdmin = Session.area === 'admin';
       Session.clear();
-
-      window.location.href = wasImpersonating
-        ? '/admin.html'
-        : (wasRole === 'admin' ? '/admin-login.html' : '/login.html');
+      window.location.href = wasImpersonating ? '/admin.html' : (wasAdmin ? '/admin-login.html' : '/login.html');
     }
-
-    const err = new Error(
-      (data && data.error) || 'Request failed'
-    );
-
+    const err = new Error((data && data.error) || ('Request failed (' + res.status + ' ' + path + ')'));
     err.data = data;
     err.status = res.status;
     throw err;
   }
-
   return data;
 }
