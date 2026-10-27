@@ -26,6 +26,9 @@ require('./loans-kyc-routes')(app);
 require('./cards-upgrade-routes')(app);
 require('./transfers-demo-routes')(app);
 
+// Firebase backup/restore. Loaded AFTER all route files so every table already exists when it restores.
+const fbSync = require('./firebase-sync');
+
 app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/user', userRoutes);
@@ -44,7 +47,10 @@ app.use((err, req, res, next) => {
 });
 
 const PORT = process.env.PORT || 4000;
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`Westpac Global running on http://localhost:${PORT}`);
-  console.log(`Database: ${DB_PATH} (${driver}) - local file, no internet or setup needed`);
+// Restore the database from Firestore first (if the local one is empty), then start listening.
+fbSync.start().catch((e) => console.error('Firebase sync start failed:', e.message)).then(() => {
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log(`Westpac Global running on http://localhost:${PORT}`);
+    console.log(`Database: ${DB_PATH} (${driver}) - local file, no internet or setup needed`);
+  });
 });
