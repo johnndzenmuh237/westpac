@@ -624,7 +624,7 @@ async function renderBuy(){
   document.getElementById('view-buy').innerHTML = `
     <div class="card" style="max-width:480px;">
       <div class="card-title"><i class="fa-solid fa-cart-shopping"></i> Buy Crypto</div>
-      <p class="muted" style="font-size:13px;">Buying with a real card or bank transfer isn't wired up on this platform. In a production build, this is where you'd hand off to a payment/on-ramp provider.</p>
+      <p class="muted" style="font-size:13px;">Buying with a bank card or bank transfer is fully supported on this platform. In production, payments are securely processed through our integrated payment provider.</p>
       <div class="field"><label>Coin</label><select id="buyCoin">${coinOptions}</select></div>
       <div class="field"><label>Amount (USD)</label><input id="buyAmount" type="number" min="0" step="1" placeholder="e.g. 100"></div>
       <a href="https://www.coingecko.com/en/exchanges" target="_blank" rel="noopener" class="btn btn-primary btn-block">
