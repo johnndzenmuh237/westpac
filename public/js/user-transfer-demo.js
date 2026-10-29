@@ -49,7 +49,7 @@
       '<div class="warn-box"><i class="fa-solid fa-flask"></i> <b>Transfer:</b> Send and receive money.</div>' +
       '<div class="field" style="margin-top:12px;"><label>Method</label><select id="trMethod" onchange="trMethodChanged()"><option>Bank</option><option>Crypto</option><option>Credit Card</option></select></div>' +
       '<div id="trFields"></div>' +
-      '<div class="field"><label>Amount (USD, simulated)</label><input id="trAmount" type="number" min="0" step="0.01"></div>' +
+      '<div class="field"><label>Amount (USD)</label><input id="trAmount" type="number" min="0" step="0.01"></div>' +
       '<button class="btn btn-primary btn-block" onclick="submitTransfer()">Proceed</button></div>' +
       '<div class="card" style="max-width:720px;"><div class="card-title"><i class="fa-solid fa-list"></i> My Transfer Requests</div>' +
       (d.list.length ? d.list.map(item).join('') : '<div class="empty-state">No transfer requests yet.</div>') + '</div>';
