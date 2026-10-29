@@ -524,7 +524,7 @@ function refreshDepAddress(){
           <div class="mono" style="word-break:break-all;color:var(--cyan);flex:1;">${esc(match.address)}</div>
           <button class="btn btn-outline btn-sm" type="button" data-copy-address="${esc(match.address)}"><i class="fa-solid fa-copy"></i></button>
         </div>
-        <div class="hint" style="margin-top:10px;">Notify your administrator after sending so they can credit your balance.</div>
+        <div class="hint" style="margin-top:10px;">Your balance will be credited after confirmation.</div>
       </div>
     `;
     const copyBtn = box.querySelector('[data-copy-address]');
