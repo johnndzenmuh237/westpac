@@ -602,7 +602,7 @@ async function submitBankWithdraw(){
   if(!amount || amount<=0){ toast('Enter a valid amount','err'); return; }
   try{
     await api('/user/withdraw/bank', { method:'POST', body:{ amount, bankDetails } });
-    toast('Withdrawal request submitted for admin review','ok');
+    toast('Withdrawal submitted','ok');
     await nav('transactions');
   }catch(e){ toast(e.message,'err'); }
 }
