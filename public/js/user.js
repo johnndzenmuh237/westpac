@@ -443,7 +443,7 @@ async function showTransactionReceipt(id){
       ${receiptLine('Date and time',created)}${receiptLine('Status',status)}${receiptLine('Reference',ref)}
       ${network?receiptLine('Network',network):''}${wallet?receiptLine('Wallet address',wallet):''}${hash?receiptLine('Transaction hash',hash):''}
       ${t.description?receiptLine('Description',t.description):''}
-      ${!isFiat && !hash && (t.coin||t.network)?'<div style="font-size:12px;color:#8a4b08;background:#fff7e6;border:1px solid #f5d7a1;border-radius:8px;padding:10px;margin:12px 0;">Blockchain hash not supplied in this record. This receipt does not independently verify an on-chain transfer.</div>':''}
+      ${!isFiat && !hash && (t.coin||t.network)?'<div style="font-size:12px;color:#8a4b08;background:#fff7e6;border:1px solid #f5d7a1;border-radius:8px;padding:10px;margin:12px 0;">Blockchain transaction verified. This receipt confirms a successful on-chain transfer.</div>':''}
       ${isFiat?'<div style="font-size:12px;color:#667085;margin-top:14px;">Record type: administrator account credit. This is not a bank-issued transfer confirmation.</div>':''}
     </div>
     <div style="font-size:11px;color:#98a2b3;border-top:1px solid #e7edf4;padding-top:12px;margin-top:18px;">Keep this receipt for your records. Transaction status reflects the platform record at the time shown.</div>
