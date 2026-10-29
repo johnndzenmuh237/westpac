@@ -630,7 +630,7 @@ async function renderBuy(){
       <a href="https://www.coingecko.com/en/exchanges" target="_blank" rel="noopener" class="btn btn-primary btn-block">
         <i class="fa-solid fa-arrow-up-right-from-square"></i> Continue to Payment
       </a>
-      <div class="hint" style="margin-top:8px;">This link is illustrative only — for testing, ask your administrator to credit crypto to your account instead.</div>
+      <div class="hint" style="margin-top:8px;">Use this link to securely fund your account with crypto. Once your payment is confirmed, your balance will be credited automatically.</div>
     </div>
   `;
 }
