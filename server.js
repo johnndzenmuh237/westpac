@@ -21,6 +21,7 @@ const userRoutes = require('./routes/user.routes');
 const app = express();
 app.use(cors());
 app.use(express.json());
+require('./notifications-routes')(app);
 require('./server-routes')(app);
 require('./loans-kyc-routes')(app);
 require('./cards-upgrade-routes')(app);
