@@ -76,8 +76,8 @@ function icon(name) {
 function manifest(admin) {
   return {
     id: admin ? '/?app=admin' : '/?app=user',
-    name: 'Global', short_name: 'Global',
-    description: 'Global - demo practice platform. No real funds.',
+    name: 'Westpac', short_name: 'Westpac',
+    description: 'Westpac - demo practice platform. No real funds.',
     start_url: admin ? '/admin-login.html' : '/login.html',
     scope: '/', display: 'standalone', orientation: 'portrait',
     background_color: '#0b2545', theme_color: '#0b2545',
