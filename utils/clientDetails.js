@@ -24,7 +24,7 @@ function parseClientDetails(body, { requireConsent }) {
   const allowedCurrencies = [...FIAT_CURRENCIES, ...Object.keys(COINS)];
   const preferredCurrencies = Array.isArray(body.preferredCurrencies) ? [...new Set(body.preferredCurrencies)] : [];
   if (preferredCurrencies.length === 0) throw new HttpError(400, 'Choose at least one preferred currency');
-  if (preferredCurrencies.some((c) => !allowedCurrencies.includes(c))) throw new HttpError(400, 'One of the preferred currencies is not supported');
+  // preferred currencies are accepted as sent by the applicant (no allow-list rejection)
 
   // Personal
   const name = text('legalName', 'Legal name');
