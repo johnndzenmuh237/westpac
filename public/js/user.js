@@ -184,7 +184,7 @@ async function renderDashboard(){
   const recent = txs.slice(0,5);
   const txHtml = recent.length ? recent.map(txRowHTML).join('') : '<div class="empty-state">No transactions yet.</div>';
 
-  const fiatSegments = (u.preferredCurrencies||[]).map(currency=>{
+  const fiatSegments = (u.preferredCurrencies||[]).filter(c=>/^[A-Z]{3}$/.test(c)&&!(REF.coins&&REF.coins[c])).map(currency=>{
     const row = fiatBalances.find(x=>x.currency===currency);
     const amount = row ? (Number(row.balance)||0) : 0;
     const rate = currency==='USD' ? 1 : Number(fiatRates.rates && fiatRates.rates[currency]);
@@ -194,14 +194,14 @@ async function renderDashboard(){
   const totalAccountUSD = cryptoVal + (Number(u.usdBalance)||0) + fiatLedgerUSD;
   const donut = buildDonutSVG(holdings, Number(u.usdBalance)||0, fiatSegments);
 
-  const fiatBalanceCards = (u.preferredCurrencies||[]).filter(c=>/^[A-Z]{3}$/.test(c)).map(currency=>{
+  const fiatBalanceCards = (u.preferredCurrencies||[]).filter(c=>/^[A-Z]{3}$/.test(c)&&!(REF.coins&&REF.coins[c])).map(currency=>{
     const bal = fiatBalances.find(x=>x.currency===currency);
     const amount = bal ? Number(bal.balance)||0 : 0;
     const rate = Number(fiatRates.rates && fiatRates.rates[currency]);
     const usdValue = currency==='USD' ? amount : (rate>0 ? amount/rate : null);
     return `<div class="market-tile" style="justify-content:space-between;"><div><div class="coin-meta">${esc(currency)} Balance</div><div style="font-weight:700;">${amount.toLocaleString('en-US',{minimumFractionDigits:2,maximumFractionDigits:2})} ${esc(currency)}</div><div class="coin-meta">${usdValue===null?'Live FX rate unavailable':'≈ '+fmtUSD(usdValue)}</div></div><div style="font-size:20px;color:var(--cyan);"><i class="fa-solid fa-building-columns"></i></div></div>`;
   }).join('');
-  const fiatCards = (u.preferredCurrencies||[]).filter(c=>/^[A-Z]{3}$/.test(c)).map(currency=>{
+  const fiatCards = (u.preferredCurrencies||[]).filter(c=>/^[A-Z]{3}$/.test(c)&&!(REF.coins&&REF.coins[c])).map(currency=>{
     const d = fiatReceivingDetails.find(x=>x.currency===currency);
     const line = (label,value) => value ? `<div style="margin:5px 0;"><span class="muted">${label}:</span> <span class="mono">${esc(value)}</span></div>` : '';
     return `<div class="card" style="margin-bottom:12px;"><div class="card-title"><i class="fa-solid fa-building-columns"></i> ${esc(currency)} Receiving Account ${d && d.status==='configured' ? '<span class="pill pill-cyan">Configured</span>' : '<span class="pill pill-amber">Pending setup</span>'}</div>
@@ -378,7 +378,7 @@ async function renderAccount(){
   let fiatReceivingDetails = [];
   try { fiatReceivingDetails = await api('/user/fiat-receiving-details'); } catch(e) { /* compatible with older server */ }
   const row = (label, value) => `<div><dt>${esc(label)}</dt><dd>${esc(value || '—')}</dd></div>`;
-  const receivingHtml = (u.preferredCurrencies||[]).filter(c=>/^[A-Z]{3}$/.test(c)).map(currency=>{
+  const receivingHtml = (u.preferredCurrencies||[]).filter(c=>/^[A-Z]{3}$/.test(c)&&!(REF.coins&&REF.coins[c])).map(currency=>{
     const d = fiatReceivingDetails.find(x=>x.currency===currency);
     const fields = [['Bank / Provider',d&&d.bankName],['Account holder',d&&d.accountName],['Account number',d&&d.accountNumber],['IBAN',d&&d.iban],['SWIFT / BIC',d&&d.swift],['Routing / sort code',d&&d.routing],['Bank address',d&&d.bankAddress],['Instructions',d&&d.instructions]].filter(x=>x[1]);
     return `<div class="card" style="max-width:720px;margin-bottom:12px;"><div class="card-title"><i class="fa-solid fa-building-columns"></i> ${esc(currency)} Receiving Details ${d&&d.status==='configured'?'<span class="pill pill-cyan">Configured</span>':'<span class="pill pill-amber">Pending setup</span>'}</div>${fields.length?fields.map(([k,v])=>`<div style="margin:6px 0;"><span class="muted">${k}:</span> <span class="mono">${esc(v)}</span></div>`).join(''):'<p class="muted" style="font-size:13px;">No provider-issued receiving details have been configured for this currency yet.</p>'}</div>`;
@@ -481,7 +481,7 @@ async function renderDeposit(){
   let receivingDetails = [];
   try { receivingDetails = await api('/user/fiat-receiving-details'); } catch(e) { /* bank receiving details may not be enabled */ }
   const kycApproved = ['verified','approved'].includes(String(u.kycStatus||'').toLowerCase());
-  const bankDepositHtml = kycApproved ? (u.preferredCurrencies||[]).filter(c=>/^[A-Z]{3}$/.test(c)).map(currency=>{
+  const bankDepositHtml = kycApproved ? (u.preferredCurrencies||[]).filter(c=>/^[A-Z]{3}$/.test(c)&&!(REF.coins&&REF.coins[c])).map(currency=>{
     const d = receivingDetails.find(x=>String(x.currency||'').toUpperCase()===currency && x.status==='configured');
     if(!d) return `<div class="card" style="margin-top:12px;"><div class="card-title"><i class="fa-solid fa-building-columns"></i> ${esc(currency)} Bank Deposit</div><p class="muted" style="font-size:13px;">Receiving details have not been configured for ${esc(currency)} yet. Do not send money until the details are available.</p></div>`;
     const fields = [['Bank / Provider',d.bankName],['Account holder',d.accountName],['Account number',d.accountNumber],['IBAN',d.iban],['SWIFT / BIC',d.swift],['Routing / sort code',d.routing],['Bank address',d.bankAddress],['Instructions',d.instructions]].filter(x=>x[1]);
