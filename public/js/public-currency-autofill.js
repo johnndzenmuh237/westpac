@@ -3,7 +3,7 @@
 (function(){
   var MAJORS = ['USD','EUR','CAD','AUD','GBP'];
   // KEEP THIS IN SYNC with the coins in the admin page (REF.coins)
-  var CRYPTO = ['BTC','ETH','USDT','USDC','BNB','XRP','SOL','ADA','DOGE','LTC','TRX','DOT'];
+  var CRYPTO = [];
 
   function init(){
     var res = document.getElementById('residence');
@@ -54,7 +54,7 @@
         '<input type="text" class="cur-dd-search" placeholder="Search currency (e.g. USD)" autocomplete="off">' +
         '<div class="cur-dd-list">' +
           '<div class="cur-dd-head" data-head="fiat">Currencies</div>' + opts(fiat) +
-          '<div class="cur-dd-head" data-head="crypto">Crypto</div>' + opts(CRYPTO) +
+          
         '</div>' +
         '<div class="cur-dd-actions"><button type="button" data-act="clear">Clear</button>' +
         '<button type="button" data-act="done">Done</button></div>' +
