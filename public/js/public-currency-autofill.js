@@ -58,6 +58,9 @@
     }
 
     box.addEventListener('change', sync);
+        // when the form is reset after submit, clear boxes and the hidden value together
+    var form = cur.closest('form');
+    if (form) form.addEventListener('reset', function(){ setTimeout(sync, 0); });
 
     var timer;
     res.addEventListener('input', function(){ clearTimeout(timer); timer = setTimeout(autofill, 600); });
